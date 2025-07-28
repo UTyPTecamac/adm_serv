@@ -121,32 +121,32 @@
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 p-6 flex items-center justify-center">
-            <div class="question-card bg-white rounded-2xl p-8 w-full max-w-4xl border border-gray-100">
+        <div class="flex-1 p-4 flex items-center justify-center">
+            <div class="question-card bg-white rounded-2xl p-10 w-full h-full max-w-none border border-gray-100" style="width: 85%; height: 85%;">
                 <div class="mb-6">
                     <div class="flex items-center space-x-3 mb-4">
                         <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
                             <span id="question-number">1</span>
                         </div>
-                        <h2 class="text-xl font-semibold text-gray-800">Pregunta <span id="question-counter">1</span></h2>
+                        <h2 class="text-2xl font-semibold text-gray-800">Pregunta <span id="question-counter">1</span></h2>
                     </div>
-                    <p id="question-text" class="text-lg text-gray-700 leading-relaxed">
+                    <p id="question-text" class="text-2xl text-gray-700 leading-relaxed font-medium">
                         ¿Cuál es la característica principal de un hipervisor Tipo I o "bare-metal"?
                     </p>
                 </div>
 
                 <div id="options-container" class="space-y-3 mb-6">
-                    <button class="option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3">
-                        <div class="w-3 h-3 bg-gray-300 rounded-full"></div>
-                        <span>Se instala sobre un sistema operativo de propósito general preexistente.</span>
+                    <button class="option-btn w-full p-6 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-gray-300 rounded-full"></div>
+                        <span class="text-xl font-medium">Se instala sobre un sistema operativo de propósito general preexistente.</span>
                     </button>
-                    <button class="option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3">
-                        <div class="w-3 h-3 bg-gray-300 rounded-full"></div>
-                        <span>Se instala directamente sobre el hardware físico de un servidor sin depender de un SO preexistente.</span>
+                    <button class="option-btn w-full p-6 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-gray-300 rounded-full"></div>
+                        <span class="text-xl font-medium">Se instala directamente sobre el hardware físico de un servidor sin depender de un SO preexistente.</span>
                     </button>
-                    <button class="option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3">
-                        <div class="w-3 h-3 bg-gray-300 rounded-full"></div>
-                        <span>Es ideal para entornos de desarrollo y pruebas individuales.</span>
+                    <button class="option-btn w-full p-6 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-gray-300 rounded-full"></div>
+                        <span class="text-xl font-medium">Es ideal para entornos de desarrollo y pruebas individuales.</span>
                     </button>
                 </div>
 
@@ -587,12 +587,12 @@
             options.forEach((btn, index) => {
                 const span = btn.querySelector('span');
                 span.textContent = question.options[index];
-                btn.className = 'option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3';
+                btn.className = 'option-btn w-full p-6 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-4';
                 btn.disabled = false;
                 
                 // Reset bullet point
                 const bullet = btn.querySelector('div');
-                bullet.className = 'w-3 h-3 bg-gray-300 rounded-full';
+                bullet.className = 'w-4 h-4 bg-gray-300 rounded-full';
             });
             
             answered = false;
@@ -760,5 +760,5 @@
             initQuiz();
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9661e99f767c4cc1',t:'MTc1MzY3OTg3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96621a7b340757bd',t:'MTc1MzY4MTg3My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
