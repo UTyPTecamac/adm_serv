@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -94,10 +92,194 @@
             40%, 43% { transform: translateY(-10px); }
             70% { transform: translateY(-5px); }
         }
+        
+        .question-circle {
+            animation: pulse 2s infinite;
+            transition: all 0.3s ease;
+        }
+        
+        .question-circle:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        
+        /* Protection styles */
+        body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .protection-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: white;
+            padding: 2rem 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            text-align: center;
+            animation: protectionFadeIn 0.3s ease-out;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        @keyframes protectionFadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        .protection-message h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .protection-message p {
+            margin: 0;
+            font-size: 1rem;
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body class="bg-white">
-    <div class="quiz-container w-full h-full flex flex-col">
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="fixed inset-0 bg-gradient-to-br from-green-600 via-green-500 to-emerald-600 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 max-w-5xl w-full mx-4 text-center shadow-2xl transform transition-all duration-500" style="max-height: 85vh;">
+            <!-- Compact Header -->
+            <div class="mb-4">
+                <div class="flex justify-center items-center space-x-3 mb-3">
+                    <i class="fas fa-server text-4xl text-green-600 icon-bounce"></i>
+                    <div class="w-1 h-8 bg-green-500 rounded-full"></div>
+                    <i class="fas fa-graduation-cap text-4xl text-blue-600 icon-bounce" style="animation-delay: 0.2s;"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800 mb-1">Cuestionario de Repaso</h1>
+                <h2 class="text-xl font-semibold text-green-600 mb-1">Soluciones de Virtualización Libres</h2>
+                <p class="text-sm text-gray-600">Basado en la infografía de hipervisores y virtualización</p>
+            </div>
+
+            <!-- Compact Welcome Message -->
+            <div class="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-4 mb-4">
+                <div class="flex items-center justify-center mb-2">
+                    <i class="fas fa-hand-wave text-2xl text-yellow-500 mr-2"></i>
+                    <h3 class="text-lg font-bold text-gray-800">¡Bienvenido/a!</h3>
+                </div>
+                <p class="text-sm text-gray-700">
+                    Pon a prueba tus conocimientos sobre virtualización, hipervisores y mejores prácticas.
+                </p>
+            </div>
+
+            <!-- Compact Instructions Grid -->
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <!-- Instructions -->
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <h4 class="text-lg font-bold text-gray-800 mb-3 flex items-center justify-center">
+                        <i class="fas fa-list-ol text-green-600 mr-2"></i>
+                        Instrucciones
+                    </h4>
+                    <ul class="text-left space-y-2 text-sm text-gray-700">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5 text-xs"></i>
+                            <span>Lee cada pregunta</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-mouse-pointer text-blue-500 mr-2 mt-0.5 text-xs"></i>
+                            <span>Selecciona la respuesta</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-lightbulb text-yellow-500 mr-2 mt-0.5 text-xs"></i>
+                            <span>Usa 💡 para pistas</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Quiz Details -->
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <h4 class="text-lg font-bold text-gray-800 mb-3 flex items-center justify-center">
+                        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                        Detalles
+                    </h4>
+                    <div class="space-y-2 text-sm text-gray-700">
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center">
+                                <i class="fas fa-question-circle text-green-500 mr-1 text-xs"></i>
+                                Preguntas:
+                            </span>
+                            <span class="font-semibold">10</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center">
+                                <i class="fas fa-clock text-orange-500 mr-1 text-xs"></i>
+                                Tiempo:
+                            </span>
+                            <span class="font-semibold">5 min</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center">
+                                <i class="fas fa-random text-purple-500 mr-1 text-xs"></i>
+                                Orden:
+                            </span>
+                            <span class="font-semibold">Aleatorio</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features -->
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <h4 class="text-lg font-bold text-gray-800 mb-3 flex items-center justify-center">
+                        <i class="fas fa-star text-yellow-500 mr-2"></i>
+                        Características
+                    </h4>
+                    <ul class="text-left space-y-2 text-sm text-gray-700">
+                        <li class="flex items-start">
+                            <i class="fas fa-brain text-purple-500 mr-2 mt-0.5 text-xs"></i>
+                            <span>Retroalimentación instantánea</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-medal text-yellow-500 mr-2 mt-0.5 text-xs"></i>
+                            <span>Puntuación en tiempo real</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-book text-blue-500 mr-2 mt-0.5 text-xs"></i>
+                            <span>Explicaciones detalladas</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Start Button -->
+            <div class="text-center">
+                <button id="start-quiz-btn" class="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white text-lg font-bold py-3 px-10 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl">
+                    <i class="fas fa-play mr-2"></i>
+                    Comenzar Cuestionario
+                </button>
+                <p class="text-xs text-gray-500 mt-2">
+                    <i class="fas fa-trophy text-yellow-500 mr-1"></i>
+                    ¡Mucho éxito en tu evaluación!
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="quiz-container" class="quiz-container w-full h-full flex flex-col hidden">
         <!-- Header -->
         <div class="bg-gradient-to-r from-green-600 to-green-500 text-white p-4 flex justify-between items-center">
             <div class="flex items-center space-x-3">
@@ -110,43 +292,49 @@
                     <span id="timer">05:00</span>
                 </div>
                 <div class="text-sm font-medium">
-                    <span id="current-question">1</span> / <span id="total-questions">6</span>
+                    <span id="current-question">1</span> / <span id="total-questions">10</span>
                 </div>
             </div>
         </div>
 
         <!-- Progress Bar -->
         <div class="bg-gray-200 h-2">
-            <div id="progress-bar" class="progress-bar h-full" style="width: 16.67%"></div>
+            <div id="progress-bar" class="progress-bar h-full" style="width: 10%"></div>
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 p-6 flex items-center justify-center">
-            <div class="question-card bg-white rounded-2xl p-8 w-full max-w-4xl border border-gray-100">
+        <div class="flex-1 p-4 flex items-center justify-center">
+            <div class="question-card bg-white rounded-2xl p-10 w-full h-full max-w-none border border-gray-100" style="width: 85%; height: 85%;">
                 <div class="mb-6">
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                    <div class="flex items-center space-x-4 mb-6">
+                        <div class="question-circle w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-lg cursor-pointer">
                             <span id="question-number">1</span>
                         </div>
-                        <h2 class="text-xl font-semibold text-gray-800">Pregunta <span id="question-counter">1</span></h2>
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-server text-green-600 text-2xl"></i>
+                            <h2 class="text-2xl font-semibold text-gray-800">Pregunta <span id="question-counter">1</span></h2>
+                        </div>
                     </div>
-                    <p id="question-text" class="text-lg text-gray-700 leading-relaxed">
-                        ¿Cuál es la característica principal de un hipervisor Tipo I o "bare-metal"?
-                    </p>
+                    <div class="flex items-start space-x-3">
+                        <i id="question-icon" class="fas fa-question-circle text-blue-500 text-2xl mt-1 flex-shrink-0"></i>
+                        <p id="question-text" class="text-2xl text-gray-700 leading-relaxed font-medium">
+                            ¿Cuál es la característica principal de un hipervisor Tipo I o "bare-metal"?
+                        </p>
+                    </div>
                 </div>
 
                 <div id="options-container" class="space-y-3 mb-6">
-                    <button class="option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3" data-option="a">
-                        <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center font-semibold text-gray-600">A</div>
-                        <span>Se instala sobre un sistema operativo de propósito general preexistente.</span>
+                    <button class="option-btn w-full p-6 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-gray-300 rounded-full"></div>
+                        <span class="text-xl font-medium">Se instala sobre un sistema operativo de propósito general preexistente.</span>
                     </button>
-                    <button class="option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3" data-option="b">
-                        <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center font-semibold text-gray-600">B</div>
-                        <span>Se instala directamente sobre el hardware físico de un servidor sin depender de un SO preexistente.</span>
+                    <button class="option-btn w-full p-6 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-gray-300 rounded-full"></div>
+                        <span class="text-xl font-medium">Se instala directamente sobre el hardware físico de un servidor sin depender de un SO preexistente.</span>
                     </button>
-                    <button class="option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3" data-option="c">
-                        <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center font-semibold text-gray-600">C</div>
-                        <span>Es ideal para entornos de desarrollo y pruebas individuales.</span>
+                    <button class="option-btn w-full p-6 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-4">
+                        <div class="w-4 h-4 bg-gray-300 rounded-full"></div>
+                        <span class="text-xl font-medium">Es ideal para entornos de desarrollo y pruebas individuales.</span>
                     </button>
                 </div>
 
@@ -155,8 +343,8 @@
                         <i class="fas fa-lightbulb"></i>
                         <span>Selecciona la respuesta correcta</span>
                     </div>
-                    <button id="next-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 opacity-50 cursor-not-allowed" disabled>
-                        Siguiente <i class="fas fa-arrow-right ml-2"></i>
+                    <button id="help-btn" class="text-gray-400 hover:text-blue-500 p-2 rounded-full hover:bg-blue-50 transition-all duration-200" title="Ver pista">
+                        <i class="fas fa-question-circle text-lg"></i>
                     </button>
                 </div>
             </div>
@@ -179,12 +367,26 @@
         </div>
     </div>
 
+    <!-- Help Modal -->
+    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden feedback-modal">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl mx-4 text-center">
+            <div class="text-6xl mb-4">
+                <i class="fas fa-lightbulb text-yellow-500"></i>
+            </div>
+            <h3 class="text-3xl font-bold mb-6 text-blue-600">💡 Pista</h3>
+            <p id="help-hint" class="text-xl text-gray-700 leading-relaxed mb-8"></p>
+            <button id="close-help-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200">
+                Entendido <i class="fas fa-check ml-2"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Feedback Modal -->
     <div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden feedback-modal">
         <div class="bg-white rounded-2xl p-8 max-w-2xl mx-4 text-center">
             <div id="feedback-icon" class="text-6xl mb-4"></div>
-            <h3 id="feedback-title" class="text-2xl font-bold mb-4"></h3>
-            <p id="feedback-explanation" class="text-gray-700 leading-relaxed mb-6"></p>
+            <h3 id="feedback-title" class="text-3xl font-bold mb-6"></h3>
+            <p id="feedback-explanation" class="text-xl text-gray-700 leading-relaxed mb-8"></p>
             <button id="continue-btn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200">
                 Continuar <i class="fas fa-arrow-right ml-2"></i>
             </button>
@@ -271,69 +473,275 @@
             oscillator.stop(audioContext.currentTime + 0.1);
         }
 
-        // Quiz data
-        const questions = [
+        // Complete question bank
+        const questionBank = [
             {
                 question: "¿Cuál es la característica principal de un hipervisor Tipo I o \"bare-metal\"?",
+                icon: "fas fa-microchip",
                 options: [
                     "Se instala sobre un sistema operativo de propósito general preexistente.",
                     "Se instala directamente sobre el hardware físico de un servidor sin depender de un SO preexistente.",
                     "Es ideal para entornos de desarrollo y pruebas individuales."
                 ],
                 correct: 1,
+                hint: "Piensa en el término 'bare-metal' - significa que no hay nada entre el hipervisor y el hardware físico del servidor.",
                 explanation: "Los hipervisores Tipo I, también conocidos como \"bare-metal\" o nativos, se instalan directamente sobre el hardware físico del servidor, lo que les permite un acceso y control directo sobre los recursos subyacentes sin la intermediación de un sistema operativo anfitrión convencional."
             },
             {
                 question: "¿Qué tecnología de virtualización de contenedores es soportada de forma nativa por Proxmox VE?",
+                icon: "fas fa-cube",
                 options: [
                     "Docker",
                     "Kubernetes",
                     "LXC (Linux Containers)"
                 ],
                 correct: 2,
+                hint: "Proxmox VE integra tanto máquinas virtuales como contenedores. Busca la tecnología de contenedores que menciona 'Linux' en su nombre.",
                 explanation: "Proxmox VE ofrece soporte nativo para contenedores LXC, integrando máquinas virtuales y contenedores en una sola plataforma de virtualización."
             },
             {
                 question: "¿Cuál de los siguientes hipervisores es de Tipo 2 (Hosted)?",
+                icon: "fas fa-desktop",
                 options: [
                     "Proxmox VE",
                     "oVirt",
                     "VirtualBox"
                 ],
                 correct: 2,
+                hint: "Los hipervisores Tipo 2 se ejecutan sobre un sistema operativo existente. Piensa en cuál de estas opciones puedes instalar en tu computadora personal.",
                 explanation: "VirtualBox es clasificado como un hipervisor de Tipo 2 (Hosted), ya que se ejecuta sobre un sistema operativo anfitrión, a diferencia de Proxmox VE y oVirt que son de Tipo 1 (Bare Metal)."
             },
             {
                 question: "¿Qué ventaja clave de los hipervisores Tipo I se traduce en una significativa reducción de costos energéticos y de espacio físico en el centro de datos?",
+                icon: "fas fa-leaf",
                 options: [
                     "Mayor Seguridad y Aislamiento",
                     "Eficiencia y Optimización de Recursos",
                     "Portabilidad y Recuperación ante Desastres Mejorada"
                 ],
                 correct: 1,
+                hint: "La pregunta menciona 'reducción de costos energéticos y espacio físico'. Piensa en qué ventaja permite usar menos servidores físicos para hacer el mismo trabajo.",
                 explanation: "La eficiencia y optimización de recursos, lograda por la consolidación de servidores, mejora drásticamente la utilización del hardware, lo que se traduce en una reducción de costos de hardware, consumo de energía (hasta un 40% de ahorro) y espacio físico."
             },
             {
                 question: "¿Qué componente de hardware es considerado el más crítico para un hipervisor Tipo I, encargado de ejecutar las instrucciones de las máquinas virtuales y gestionar la virtualización asistida por hardware?",
+                icon: "fas fa-microchip",
                 options: [
                     "Memoria RAM",
                     "Procesador (CPU)",
                     "Almacenamiento"
                 ],
                 correct: 1,
+                hint: "La pregunta menciona 'ejecutar instrucciones' y 'virtualización asistida por hardware'. ¿Qué componente es el cerebro del computador que ejecuta todas las instrucciones?",
                 explanation: "El procesador (CPU) es el componente más crítico para un hipervisor Tipo I, siendo responsable de ejecutar las instrucciones de las máquinas virtuales y de gestionar la virtualización asistida por hardware."
             },
             {
                 question: "Para Microsoft Hyper-V, ¿qué tecnología de Traducción de Direcciones de Segundo Nivel (SLAT) es un requisito fundamental?",
+                icon: "fab fa-microsoft",
                 options: [
                     "Intel VT-x o AMD-V",
                     "NX bit o XD bit",
                     "EPT (Intel) o NPT (AMD)"
                 ],
                 correct: 2,
+                hint: "SLAT significa 'Traducción de Direcciones de Segundo Nivel'. Busca la opción que mencione tecnologías específicas para Intel y AMD relacionadas con tablas de páginas extendidas.",
                 explanation: "Para Microsoft Hyper-V, la compatibilidad con SLAT, específicamente EPT para Intel o NPT para AMD, es un requisito fundamental para la seguridad basada en virtualización y la protección de la memoria."
+            },
+            {
+                question: "¿Qué tipo de memoria RAM se recomienda para implementaciones de host físico en entornos virtualizados para prevenir errores de datos y asegurar estabilidad?",
+                icon: "fas fa-memory",
+                options: [
+                    "DDR3",
+                    "ECC (Error Correcting Code)",
+                    "SODIMM"
+                ],
+                correct: 1,
+                hint: "La pregunta enfatiza 'prevenir errores de datos'. Busca la opción que tenga en su nombre algo relacionado con corrección de errores.",
+                explanation: "Se recomienda el uso de memoria ECC (Error Correcting Code) o tecnología similar, ya que ayuda a prevenir errores de datos, lo cual es crucial para la estabilidad en entornos de servidor."
+            },
+            {
+                question: "¿Cuál es uno de los mayores factores que degradan el rendimiento en la virtualización debido a una dotación insuficiente de RAM?",
+                icon: "fas fa-tachometer-alt",
+                options: [
+                    "Mayor uso de caché de CPU",
+                    "El host comienza a intercambiar (swapping) datos de las VMs al disco",
+                    "Aumento de la velocidad de la red"
+                ],
+                correct: 1,
+                hint: "Cuando no hay suficiente RAM, el sistema debe usar el disco duro como memoria temporal. ¿Cómo se llama este proceso de intercambio entre RAM y disco?",
+                explanation: "Una dotación insuficiente de RAM es uno de los mayores factores que degradan el rendimiento, ya que el host puede comenzar a intercambiar datos de las VMs al disco (swapping), o los sistemas operativos de las VMs pueden empezar a paginar, lo que consume IOPS y degrada el rendimiento."
+            },
+            {
+                question: "¿Qué tipo de discos se recomiendan para el almacenamiento de sistemas operativos y aplicaciones de máquinas virtuales debido a su alta velocidad y IOPS?",
+                icon: "fas fa-hdd",
+                options: [
+                    "Discos HDD convencionales",
+                    "Discos SAS",
+                    "Discos SSD NVMe"
+                ],
+                correct: 2,
+                hint: "La pregunta enfatiza 'alta velocidad y IOPS'. Los discos de estado sólido son más rápidos que los mecánicos. ¿Cuál es la tecnología más moderna y rápida de SSD?",
+                explanation: "Se recomiendan los discos SSD NVMe para el almacenamiento de los sistemas operativos y aplicaciones de las máquinas virtuales debido a su alta velocidad y IOPS (operaciones de entrada/salida por segundo)."
+            },
+            {
+                question: "Para la redundancia y el rendimiento del almacenamiento de datos en un entorno virtualizado, ¿qué tipo de volumen RAID se recomienda generalmente?",
+                icon: "fas fa-shield-alt",
+                options: [
+                    "RAID 0",
+                    "RAID 5",
+                    "RAID 10"
+                ],
+                correct: 2,
+                hint: "La pregunta pide TANTO redundancia COMO rendimiento. RAID 0 es rápido pero sin redundancia, RAID 1 tiene redundancia. ¿Cuál combina ambos números?",
+                explanation: "Para la redundancia y el rendimiento, se recomienda el uso de volúmenes RAID 10 para el almacenamiento de datos en entornos virtualizados, ya que combina las ventajas de RAID 1 (redundancia) y RAID 0 (rendimiento)."
+            },
+            {
+                question: "¿Cuál es una de las principales ventajas de oVirt para grandes empresas y centros de datos?",
+                icon: "fas fa-building",
+                options: [
+                    "Soporte nativo de contenedores LXC",
+                    "Gestión avanzada y escalabilidad empresarial",
+                    "Simplicidad para uso individual"
+                ],
+                correct: 1,
+                hint: "La pregunta menciona 'grandes empresas y centros de datos'. ¿Qué característica sería más importante para organizaciones grandes y complejas?",
+                explanation: "La infografía destaca que oVirt es ideal para grandes empresas y centros de datos debido a su gestión avanzada, consola web sofisticada y capacidad de escalabilidad empresarial."
+            },
+            {
+                question: "En un clúster de hipervisores, ¿qué es un requisito indispensable en cuanto a la compatibilidad de las CPUs?",
+                icon: "fas fa-network-wired",
+                options: [
+                    "Deben tener la misma velocidad de reloj.",
+                    "Deben ser del mismo proveedor (Intel o AMD).",
+                    "Deben tener el mismo número de núcleos."
+                ],
+                correct: 1,
+                hint: "En un clúster, las VMs pueden migrar entre servidores. Los dos principales fabricantes de CPUs tienen arquitecturas diferentes. ¿Qué debe ser igual para garantizar compatibilidad?",
+                explanation: "En un grupo de recursos (clúster) de hipervisores, es crucial que el proveedor de la CPU (Intel o AMD) sea el mismo en todas las CPUs de todos los servidores del clúster para garantizar una amplia compatibilidad."
+            },
+            {
+                question: "¿Qué término se utiliza para describir máquinas virtuales inactivas u olvidadas que siguen consumiendo recursos y pueden obstaculizar el rendimiento de la infraestructura virtual?",
+                icon: "fas fa-ghost",
+                options: [
+                    "VMs fantasma",
+                    "VMs zombis",
+                    "VMs durmientes"
+                ],
+                correct: 1,
+                hint: "Piensa en términos de películas de terror. ¿Cómo se llaman los seres que están 'muertos' pero siguen 'vivos' consumiendo recursos sin propósito útil?",
+                explanation: "Las \"máquinas virtuales zombies\" son VMs inactivas u olvidadas que continúan consumiendo recursos, lo que puede obstaculizar el rendimiento general de la infraestructura virtual."
+            },
+            {
+                question: "¿Qué tecnología permite añadir o ajustar recursos de memoria a una VM mientras el sistema operativo invitado está en ejecución?",
+                icon: "fas fa-plug",
+                options: [
+                    "Memoria Estática",
+                    "Memoria Dinámica (o Hot Add)",
+                    "Memoria Compartida"
+                ],
+                correct: 1,
+                hint: "La pregunta enfatiza 'mientras está en ejecución', es decir, sin apagar la VM. ¿Qué tipo de memoria permite cambios 'en caliente' o dinámicos?",
+                explanation: "Funcionalidades como la Memoria Dinámica (disponible en Hyper-V) o VMware Hot Add permiten añadir o ajustar recursos de memoria a una VM mientras el sistema operativo invitado está en ejecución."
+            },
+            {
+                question: "¿Qué nivel de velocidad de NICs (Network Interface Cards) es preferible para transferencias de datos rápidas y migraciones en vivo de VMs en entornos de producción?",
+                icon: "fas fa-ethernet",
+                options: [
+                    "Gigabit (1 Gbps)",
+                    "10 Gbps o superiores",
+                    "100 Mbps"
+                ],
+                correct: 1,
+                hint: "La pregunta menciona 'entornos de producción' y 'migraciones en vivo'. Para transferir VMs completas rápidamente, se necesita mucho ancho de banda. ¿Cuál es la velocidad más alta?",
+                explanation: "Se recomienda una o más NIC de Gigabit o más rápidas, siendo las de 10 Gbps o superiores preferibles para transferencias de datos rápidas, migraciones en vivo de VMs y entornos de producción."
+            },
+            {
+                question: "¿Qué práctica es fundamental para la seguridad de un host con hipervisor, ayudando a limitar las superficies de ataque?",
+                icon: "fas fa-lock",
+                options: [
+                    "Instalar múltiples roles de servidor en el host.",
+                    "Ejecutar los hipervisores en un host dedicado que no desempeñe funciones adicionales.",
+                    "Deshabilitar las actualizaciones de seguridad para evitar interrupciones."
+                ],
+                correct: 1,
+                hint: "La pregunta menciona 'limitar superficies de ataque'. En seguridad, menos servicios y funciones = menos vulnerabilidades. ¿Qué opción reduce la complejidad?",
+                explanation: "Es una práctica fundamental ejecutar los hipervisores en un host dedicado que no desempeñe funciones adicionales, lo que ayuda a limitar las superficies de ataque y mejorar la seguridad del sistema."
+            },
+            {
+                question: "En la optimización del rendimiento de las VMs, ¿qué tipo de archivos VHD (Virtual Hard Disk) se recomienda utilizar para una mejora del rendimiento?",
+                icon: "fas fa-file",
+                options: [
+                    "Dinámicos",
+                    "Fijos",
+                    "Passthrough"
+                ],
+                correct: 1,
+                hint: "Los archivos dinámicos crecen según se necesite, pero esto requiere procesamiento adicional. Los archivos de tamaño predeterminado evitan esta sobrecarga. ¿Cuál sería más rápido?",
+                explanation: "Utilizar archivos VHD (Virtual Hard Disk) fijos en lugar de dinámicos puede mejorar significativamente el rendimiento de las máquinas virtuales."
+            },
+            {
+                question: "Para evitar cuellos de botella en las operaciones de E/S del almacenamiento, ¿qué se recomienda hacer con las máquinas virtuales con cargas de trabajo intensivas?",
+                icon: "fas fa-database",
+                options: [
+                    "Consolidarlas en un único volumen de almacenamiento.",
+                    "Organizarlas en volúmenes de almacenamiento separados.",
+                    "Asignarles menos recursos de almacenamiento."
+                ],
+                correct: 1,
+                hint: "Si varias VMs compiten por el mismo disco, se crean cuellos de botella. ¿Cómo se puede distribuir la carga de E/S para evitar competencia?",
+                explanation: "Para evitar cuellos de botella en las operaciones de E/S, se recomienda organizar las máquinas virtuales con cargas de trabajo intensivas en volúmenes de almacenamiento separados, asegurando que cada VM tenga suficientes recursos."
+            },
+            {
+                question: "¿Cuál de las siguientes es una ventaja clave de la implementación de hipervisores Tipo I en entornos empresariales relacionada con la capacidad de mover cargas de trabajo entre diferentes hosts físicos sin interrupciones?",
+                icon: "fas fa-exchange-alt",
+                options: [
+                    "Mayor Seguridad y Aislamiento",
+                    "Rendimiento Superior",
+                    "Portabilidad y Recuperación ante Desastres Mejorada (migración en vivo o vMotion)"
+                ],
+                correct: 2,
+                hint: "La pregunta enfatiza 'mover cargas de trabajo entre hosts sin interrupciones'. ¿Qué ventaja está directamente relacionada con la capacidad de transportar y migrar VMs?",
+                explanation: "La portabilidad de las máquinas virtuales permite mover cargas de trabajo entre diferentes hosts físicos sin interrupciones (migración en vivo o vMotion), lo cual es crucial para la recuperación ante desastres y la agilidad operativa."
+            },
+            {
+                question: "¿Qué enfoque de escalabilidad implica aumentar el número de componentes individuales, como añadir más nodos de hipervisor a un clúster?",
+                icon: "fas fa-expand-arrows-alt",
+                options: [
+                    "Escalabilidad Vertical",
+                    "Escalabilidad Horizontal",
+                    "Escalabilidad Dinámica"
+                ],
+                correct: 1,
+                explanation: "La escalabilidad horizontal en un entorno virtualizado se logra aumentando el número de componentes individuales, como añadir más nodos de hipervisor a un clúster."
             }
         ];
+
+        // Selected questions for current quiz session
+        let questions = [];
+
+        // Function to randomly select 10 questions and shuffle options
+        function selectRandomQuestions() {
+            const shuffled = [...questionBank].sort(() => 0.5 - Math.random());
+            questions = shuffled.slice(0, 10).map(question => {
+                // Create array of options with their original indices
+                const optionsWithIndex = question.options.map((option, index) => ({
+                    text: option,
+                    originalIndex: index
+                }));
+                
+                // Shuffle the options
+                const shuffledOptions = optionsWithIndex.sort(() => 0.5 - Math.random());
+                
+                // Find new position of correct answer
+                const newCorrectIndex = shuffledOptions.findIndex(option => option.originalIndex === question.correct);
+                
+                return {
+                    ...question,
+                    options: shuffledOptions.map(option => option.text),
+                    correct: newCorrectIndex
+                };
+            });
+        }
 
         // Quiz state
         let currentQuestion = 0;
@@ -346,7 +754,8 @@
         // DOM elements
         const questionText = document.getElementById('question-text');
         const optionsContainer = document.getElementById('options-container');
-        const nextBtn = document.getElementById('next-btn');
+        const helpBtn = document.getElementById('help-btn');
+        const helpModal = document.getElementById('help-modal');
         const feedbackModal = document.getElementById('feedback-modal');
         const resultsModal = document.getElementById('results-modal');
         const timerElement = document.getElementById('timer');
@@ -354,6 +763,7 @@
 
         // Initialize quiz
         function initQuiz() {
+            selectRandomQuestions();
             startTimer();
             loadQuestion();
             updateUI();
@@ -381,17 +791,23 @@
             const question = questions[currentQuestion];
             questionText.textContent = question.question;
             
+            // Update question icon
+            const questionIcon = document.getElementById('question-icon');
+            questionIcon.className = `${question.icon} text-blue-500 text-2xl mt-1 flex-shrink-0`;
+            
             const options = optionsContainer.querySelectorAll('.option-btn');
             options.forEach((btn, index) => {
                 const span = btn.querySelector('span');
                 span.textContent = question.options[index];
-                btn.className = 'option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3';
+                btn.className = 'option-btn w-full p-6 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-4';
                 btn.disabled = false;
+                
+                // Reset bullet point
+                const bullet = btn.querySelector('div');
+                bullet.className = 'w-4 h-4 bg-gray-300 rounded-full';
             });
             
             answered = false;
-            nextBtn.disabled = true;
-            nextBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 opacity-50 cursor-not-allowed';
         }
 
         // Handle option selection
@@ -447,6 +863,21 @@
             
             feedbackExplanation.textContent = explanation;
             feedbackModal.classList.remove('hidden');
+        }
+
+        // Show help modal
+        function showHelp() {
+            if (answered) return; // Don't show help after answering
+            
+            const question = questions[currentQuestion];
+            document.getElementById('help-hint').textContent = question.hint;
+            helpModal.classList.remove('hidden');
+            playClickSound();
+        }
+
+        // Close help modal
+        function closeHelp() {
+            helpModal.classList.add('hidden');
         }
 
         // Continue to next question
@@ -515,7 +946,16 @@
             initQuiz();
         }
 
+        // Start quiz function
+        function startQuiz() {
+            document.getElementById('welcome-screen').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            initQuiz();
+        }
+
         // Event listeners
+        document.getElementById('start-quiz-btn').addEventListener('click', startQuiz);
+        
         optionsContainer.addEventListener('click', (e) => {
             const btn = e.target.closest('.option-btn');
             if (btn) {
@@ -524,9 +964,187 @@
             }
         });
 
+        helpBtn.addEventListener('click', showHelp);
+        document.getElementById('close-help-btn').addEventListener('click', closeHelp);
         document.getElementById('continue-btn').addEventListener('click', continueQuiz);
         document.getElementById('restart-btn').addEventListener('click', restartQuiz);
 
+        // Protection functions
+        function showProtectionMessage() {
+            // Remove any existing protection message
+            const existingMessage = document.querySelector('.protection-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            
+            // Create protection message
+            const protectionDiv = document.createElement('div');
+            protectionDiv.className = 'protection-message';
+            protectionDiv.innerHTML = `
+                <div>
+                    <i class="fas fa-shield-alt" style="font-size: 3rem; margin-bottom: 1rem; color: #fbbf24;"></i>
+                    <h3>¡Gracias por realizar el cuestionario!</h3>
+                    <p><strong>Cuestionario de Repaso:</strong><br>Soluciones de Virtualización Libres</p>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                        <i class="fas fa-heart" style="color: #f87171;"></i> 
+                        Contenido protegido
+                    </p>
+                </div>
+            `;
+            
+            document.body.appendChild(protectionDiv);
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                if (protectionDiv && protectionDiv.parentNode) {
+                    protectionDiv.style.animation = 'protectionFadeIn 0.3s ease-out reverse';
+                    setTimeout(() => {
+                        protectionDiv.remove();
+                    }, 300);
+                }
+            }, 3000);
+        }
+        
+        // Multiple layers of right-click protection
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            showProtectionMessage();
+            return false;
+        }, true);
+        
+        // Additional right-click protection
+        document.oncontextmenu = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showProtectionMessage();
+            return false;
+        };
+        
+        // Mouse button protection
+        document.addEventListener('mousedown', function(e) {
+            if (e.button === 2) { // Right mouse button
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+        }, true);
+        
+        document.addEventListener('mouseup', function(e) {
+            if (e.button === 2) { // Right mouse button
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+        }, true);
+        
+        // Disable F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S
+        document.addEventListener('keydown', function(e) {
+            // F12
+            if (e.keyCode === 123) {
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+            
+            // Ctrl+Shift+I (Developer Tools)
+            if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+            
+            // Ctrl+U (View Source)
+            if (e.ctrlKey && e.keyCode === 85) {
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+            
+            // Ctrl+S (Save Page)
+            if (e.ctrlKey && e.keyCode === 83) {
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+            
+            // Ctrl+Shift+C (Inspect Element)
+            if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+            
+            // Ctrl+Shift+J (Console)
+            if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+            
+            // Ctrl+Shift+K (Console in Firefox)
+            if (e.ctrlKey && e.shiftKey && e.keyCode === 75) {
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+        }, true);
+        
+        // Disable text selection
+        document.onselectstart = function(e) {
+            e.preventDefault();
+            return false;
+        };
+        
+        document.onmousedown = function(e) {
+            if (e.button !== 0) { // Allow only left click
+                e.preventDefault();
+                return false;
+            }
+        };
+        
+        // Disable drag
+        document.ondragstart = function(e) {
+            e.preventDefault();
+            return false;
+        };
+        
+        // Additional protection for touch devices
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+                showProtectionMessage();
+                return false;
+            }
+        }, true);
+        
+        // Disable print
+        window.addEventListener('beforeprint', function(e) {
+            e.preventDefault();
+            showProtectionMessage();
+            return false;
+        });
+        
+        // Disable Ctrl+P
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.keyCode === 80) {
+                e.preventDefault();
+                e.stopPropagation();
+                showProtectionMessage();
+                return false;
+            }
+        }, true);
+        
         // Initialize quiz on page load
         document.addEventListener('DOMContentLoaded', () => {
             // Enable audio context on user interaction
@@ -536,8 +1154,8 @@
                 }
             }, { once: true });
             
-            initQuiz();
+            // Show welcome screen first, don't initialize quiz yet
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9665eec1011a3234',t:'MTc1MzcyMjAyNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9665f3910491b6eb',t:'MTc1MzcyMjIyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
