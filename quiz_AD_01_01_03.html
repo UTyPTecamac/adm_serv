@@ -94,6 +94,22 @@
             40%, 43% { transform: translateY(-10px); }
             70% { transform: translateY(-5px); }
         }
+        
+        .question-circle {
+            animation: pulse 2s infinite;
+            transition: all 0.3s ease;
+        }
+        
+        .question-circle:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
     </style>
 </head>
 <body class="bg-white">
@@ -124,15 +140,21 @@
         <div class="flex-1 p-4 flex items-center justify-center">
             <div class="question-card bg-white rounded-2xl p-10 w-full h-full max-w-none border border-gray-100" style="width: 85%; height: 85%;">
                 <div class="mb-6">
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                    <div class="flex items-center space-x-4 mb-6">
+                        <div class="question-circle w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-lg cursor-pointer">
                             <span id="question-number">1</span>
                         </div>
-                        <h2 class="text-2xl font-semibold text-gray-800">Pregunta <span id="question-counter">1</span></h2>
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-server text-green-600 text-2xl"></i>
+                            <h2 class="text-2xl font-semibold text-gray-800">Pregunta <span id="question-counter">1</span></h2>
+                        </div>
                     </div>
-                    <p id="question-text" class="text-2xl text-gray-700 leading-relaxed font-medium">
-                        ¿Cuál es la característica principal de un hipervisor Tipo I o "bare-metal"?
-                    </p>
+                    <div class="flex items-start space-x-3">
+                        <i id="question-icon" class="fas fa-question-circle text-blue-500 text-2xl mt-1 flex-shrink-0"></i>
+                        <p id="question-text" class="text-2xl text-gray-700 leading-relaxed font-medium">
+                            ¿Cuál es la característica principal de un hipervisor Tipo I o "bare-metal"?
+                        </p>
+                    </div>
                 </div>
 
                 <div id="options-container" class="space-y-3 mb-6">
@@ -185,8 +207,8 @@
             <div class="text-6xl mb-4">
                 <i class="fas fa-lightbulb text-yellow-500"></i>
             </div>
-            <h3 class="text-2xl font-bold mb-4 text-blue-600">💡 Pista</h3>
-            <p id="help-hint" class="text-gray-700 leading-relaxed mb-6"></p>
+            <h3 class="text-3xl font-bold mb-6 text-blue-600">💡 Pista</h3>
+            <p id="help-hint" class="text-xl text-gray-700 leading-relaxed mb-8"></p>
             <button id="close-help-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200">
                 Entendido <i class="fas fa-check ml-2"></i>
             </button>
@@ -197,8 +219,8 @@
     <div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden feedback-modal">
         <div class="bg-white rounded-2xl p-8 max-w-2xl mx-4 text-center">
             <div id="feedback-icon" class="text-6xl mb-4"></div>
-            <h3 id="feedback-title" class="text-2xl font-bold mb-4"></h3>
-            <p id="feedback-explanation" class="text-gray-700 leading-relaxed mb-6"></p>
+            <h3 id="feedback-title" class="text-3xl font-bold mb-6"></h3>
+            <p id="feedback-explanation" class="text-xl text-gray-700 leading-relaxed mb-8"></p>
             <button id="continue-btn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200">
                 Continuar <i class="fas fa-arrow-right ml-2"></i>
             </button>
@@ -289,6 +311,7 @@
         const questionBank = [
             {
                 question: "¿Cuál es la característica principal de un hipervisor Tipo I o \"bare-metal\"?",
+                icon: "fas fa-microchip",
                 options: [
                     "Se instala sobre un sistema operativo de propósito general preexistente.",
                     "Se instala directamente sobre el hardware físico de un servidor sin depender de un SO preexistente.",
@@ -300,6 +323,7 @@
             },
             {
                 question: "¿Qué tecnología de virtualización de contenedores es soportada de forma nativa por Proxmox VE?",
+                icon: "fas fa-cube",
                 options: [
                     "Docker",
                     "Kubernetes",
@@ -311,6 +335,7 @@
             },
             {
                 question: "¿Cuál de los siguientes hipervisores es de Tipo 2 (Hosted)?",
+                icon: "fas fa-desktop",
                 options: [
                     "Proxmox VE",
                     "oVirt",
@@ -322,6 +347,7 @@
             },
             {
                 question: "¿Qué ventaja clave de los hipervisores Tipo I se traduce en una significativa reducción de costos energéticos y de espacio físico en el centro de datos?",
+                icon: "fas fa-leaf",
                 options: [
                     "Mayor Seguridad y Aislamiento",
                     "Eficiencia y Optimización de Recursos",
@@ -333,6 +359,7 @@
             },
             {
                 question: "¿Qué componente de hardware es considerado el más crítico para un hipervisor Tipo I, encargado de ejecutar las instrucciones de las máquinas virtuales y gestionar la virtualización asistida por hardware?",
+                icon: "fas fa-microchip",
                 options: [
                     "Memoria RAM",
                     "Procesador (CPU)",
@@ -344,6 +371,7 @@
             },
             {
                 question: "Para Microsoft Hyper-V, ¿qué tecnología de Traducción de Direcciones de Segundo Nivel (SLAT) es un requisito fundamental?",
+                icon: "fab fa-microsoft",
                 options: [
                     "Intel VT-x o AMD-V",
                     "NX bit o XD bit",
@@ -355,6 +383,7 @@
             },
             {
                 question: "¿Qué tipo de memoria RAM se recomienda para implementaciones de host físico en entornos virtualizados para prevenir errores de datos y asegurar estabilidad?",
+                icon: "fas fa-memory",
                 options: [
                     "DDR3",
                     "ECC (Error Correcting Code)",
@@ -366,6 +395,7 @@
             },
             {
                 question: "¿Cuál es uno de los mayores factores que degradan el rendimiento en la virtualización debido a una dotación insuficiente de RAM?",
+                icon: "fas fa-tachometer-alt",
                 options: [
                     "Mayor uso de caché de CPU",
                     "El host comienza a intercambiar (swapping) datos de las VMs al disco",
@@ -377,6 +407,7 @@
             },
             {
                 question: "¿Qué tipo de discos se recomiendan para el almacenamiento de sistemas operativos y aplicaciones de máquinas virtuales debido a su alta velocidad y IOPS?",
+                icon: "fas fa-hdd",
                 options: [
                     "Discos HDD convencionales",
                     "Discos SAS",
@@ -388,6 +419,7 @@
             },
             {
                 question: "Para la redundancia y el rendimiento del almacenamiento de datos en un entorno virtualizado, ¿qué tipo de volumen RAID se recomienda generalmente?",
+                icon: "fas fa-shield-alt",
                 options: [
                     "RAID 0",
                     "RAID 5",
@@ -399,6 +431,7 @@
             },
             {
                 question: "¿Cuál es una de las principales ventajas de oVirt para grandes empresas y centros de datos?",
+                icon: "fas fa-building",
                 options: [
                     "Soporte nativo de contenedores LXC",
                     "Gestión avanzada y escalabilidad empresarial",
@@ -410,6 +443,7 @@
             },
             {
                 question: "En un clúster de hipervisores, ¿qué es un requisito indispensable en cuanto a la compatibilidad de las CPUs?",
+                icon: "fas fa-network-wired",
                 options: [
                     "Deben tener la misma velocidad de reloj.",
                     "Deben ser del mismo proveedor (Intel o AMD).",
@@ -421,6 +455,7 @@
             },
             {
                 question: "¿Qué término se utiliza para describir máquinas virtuales inactivas u olvidadas que siguen consumiendo recursos y pueden obstaculizar el rendimiento de la infraestructura virtual?",
+                icon: "fas fa-ghost",
                 options: [
                     "VMs fantasma",
                     "VMs zombis",
@@ -432,6 +467,7 @@
             },
             {
                 question: "¿Qué tecnología permite añadir o ajustar recursos de memoria a una VM mientras el sistema operativo invitado está en ejecución?",
+                icon: "fas fa-plug",
                 options: [
                     "Memoria Estática",
                     "Memoria Dinámica (o Hot Add)",
@@ -443,6 +479,7 @@
             },
             {
                 question: "¿Qué nivel de velocidad de NICs (Network Interface Cards) es preferible para transferencias de datos rápidas y migraciones en vivo de VMs en entornos de producción?",
+                icon: "fas fa-ethernet",
                 options: [
                     "Gigabit (1 Gbps)",
                     "10 Gbps o superiores",
@@ -454,6 +491,7 @@
             },
             {
                 question: "¿Qué práctica es fundamental para la seguridad de un host con hipervisor, ayudando a limitar las superficies de ataque?",
+                icon: "fas fa-lock",
                 options: [
                     "Instalar múltiples roles de servidor en el host.",
                     "Ejecutar los hipervisores en un host dedicado que no desempeñe funciones adicionales.",
@@ -465,6 +503,7 @@
             },
             {
                 question: "En la optimización del rendimiento de las VMs, ¿qué tipo de archivos VHD (Virtual Hard Disk) se recomienda utilizar para una mejora del rendimiento?",
+                icon: "fas fa-file",
                 options: [
                     "Dinámicos",
                     "Fijos",
@@ -476,6 +515,7 @@
             },
             {
                 question: "Para evitar cuellos de botella en las operaciones de E/S del almacenamiento, ¿qué se recomienda hacer con las máquinas virtuales con cargas de trabajo intensivas?",
+                icon: "fas fa-database",
                 options: [
                     "Consolidarlas en un único volumen de almacenamiento.",
                     "Organizarlas en volúmenes de almacenamiento separados.",
@@ -487,6 +527,7 @@
             },
             {
                 question: "¿Cuál de las siguientes es una ventaja clave de la implementación de hipervisores Tipo I en entornos empresariales relacionada con la capacidad de mover cargas de trabajo entre diferentes hosts físicos sin interrupciones?",
+                icon: "fas fa-exchange-alt",
                 options: [
                     "Mayor Seguridad y Aislamiento",
                     "Rendimiento Superior",
@@ -498,6 +539,7 @@
             },
             {
                 question: "¿Qué enfoque de escalabilidad implica aumentar el número de componentes individuales, como añadir más nodos de hipervisor a un clúster?",
+                icon: "fas fa-expand-arrows-alt",
                 options: [
                     "Escalabilidad Vertical",
                     "Escalabilidad Horizontal",
@@ -582,6 +624,10 @@
         function loadQuestion() {
             const question = questions[currentQuestion];
             questionText.textContent = question.question;
+            
+            // Update question icon
+            const questionIcon = document.getElementById('question-icon');
+            questionIcon.className = `${question.icon} text-blue-500 text-2xl mt-1 flex-shrink-0`;
             
             const options = optionsContainer.querySelectorAll('.option-btn');
             options.forEach((btn, index) => {
@@ -760,5 +806,5 @@
             initQuiz();
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96621a7b340757bd',t:'MTc1MzY4MTg3My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96622878b4d77a65',t:'MTc1MzY4MjQ0Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
