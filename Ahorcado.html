@@ -1,0 +1,598 @@
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahorcado - Virtualización</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .score-box {
+            background: #f8f9fa;
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+
+        .score-box h3 {
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        .score-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .hangman-container {
+            margin: 30px 0;
+        }
+
+        .hangman-drawing {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            line-height: 1.2;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #dee2e6;
+            white-space: pre-line;
+            color: #495057;
+        }
+
+        .word-container {
+            margin: 30px 0;
+        }
+
+        .word-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            letter-spacing: 10px;
+            color: #333;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .hint {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #2196f3;
+            margin: 20px 0;
+            color: #1565c0;
+            font-style: italic;
+        }
+
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+            gap: 8px;
+            max-width: 600px;
+            margin: 30px auto;
+        }
+
+        .key {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 8px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 45px;
+        }
+
+        .key:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .key:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .key.correct {
+            background: #28a745;
+        }
+
+        .key.incorrect {
+            background: #dc3545;
+        }
+
+        .wrong-letters {
+            margin: 20px 0;
+        }
+
+        .wrong-letters h4 {
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+
+        .wrong-list {
+            font-size: 1.2rem;
+            color: #dc3545;
+            font-weight: bold;
+            letter-spacing: 3px;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+
+        .message {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .message.win {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.lose {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .word-display {
+                font-size: 2rem;
+                letter-spacing: 5px;
+            }
+            
+            .game-info {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎮 Ahorcado</h1>
+        <p class="subtitle">Términos de Virtualización</p>
+        
+        <div class="game-info">
+            <div class="score-box">
+                <h3>Victorias</h3>
+                <div class="score-number" id="wins">0</div>
+            </div>
+            <div class="score-box">
+                <h3>Derrotas</h3>
+                <div class="score-number" id="losses">0</div>
+            </div>
+            <div class="score-box">
+                <h3>Intentos</h3>
+                <div class="score-number" id="attempts">6</div>
+            </div>
+        </div>
+
+        <div class="hangman-container">
+            <div class="hangman-drawing" id="hangman">
+  +---+
+  |   |
+      |
+      |
+      |
+      |
+=========
+            </div>
+        </div>
+
+        <div class="word-container">
+            <div class="word-display" id="wordDisplay"></div>
+            <div class="hint" id="hint"></div>
+        </div>
+
+        <div class="wrong-letters">
+            <h4>Letras incorrectas:</h4>
+            <div class="wrong-list" id="wrongLetters"></div>
+        </div>
+
+        <div class="keyboard" id="keyboard"></div>
+
+        <div class="message" id="message" style="display: none;"></div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="newGame()">🎯 Nueva Palabra</button>
+            <button class="btn btn-success" onclick="showHint()">💡 Mostrar Pista</button>
+        </div>
+    </div>
+
+    <script>
+        const words = [
+            {
+                word: "VIRTUALIZACION",
+                hint: "Tecnología que permite crear entornos virtuales a partir de recursos físicos (13 letras)"
+            },
+            {
+                word: "HIPERVISOR",
+                hint: "Software clave para la gestión de máquinas virtuales, tipos 1 y 2 (9 letras)"
+            },
+            {
+                word: "MAQUINA",
+                hint: "Parte de 'máquina virtual', concepto fundamental en virtualización (7 letras)"
+            },
+            {
+                word: "SERVIDOR",
+                hint: "Hardware físico que soporta la virtualización (8 letras)"
+            },
+            {
+                word: "ESCALABILIDAD",
+                hint: "Beneficio clave que permite flexibilidad empresarial (12 letras)"
+            },
+            {
+                word: "CONSOLIDACION",
+                hint: "Proceso de reducir servidores físicos mediante virtualización (13 letras)"
+            },
+            {
+                word: "RECURSOS",
+                hint: "Elementos que la virtualización optimiza: CPU, memoria, almacenamiento (8 letras)"
+            },
+            {
+                word: "FLEXIBILIDAD",
+                hint: "Propiedad que permite adaptarse a demandas cambiantes (11 letras)"
+            },
+            {
+                word: "CONTINUIDAD",
+                hint: "Relacionada con la continuidad de negocio, beneficio crítico (11 letras)"
+            },
+            {
+                word: "BAREMETAL",
+                hint: "Describe hipervisores Tipo 1, instalados directamente sobre hardware (9 letras)"
+            },
+            {
+                word: "HOSTED",
+                hint: "Describe hipervisores Tipo 2, dependen de sistema operativo anfitrión (6 letras)"
+            },
+            {
+                word: "EFICIENCIA",
+                hint: "Resultado clave asociado con la optimización de recursos (9 letras)"
+            }
+        ];
+
+        const hangmanStages = [
+            `  +-----+
+  |     |
+  |      
+  |      
+  |      
+  |      
+  +------`,
+            `  +-----+
+  |     |
+  |     😵
+  |      
+  |      
+  |      
+  +------`,
+            `  +-----+
+  |     |
+  |     😵
+  |     |
+  |     |
+  |      
+  +------`,
+            `  +-----+
+  |     |
+  |     😵
+  |    /|
+  |     |
+  |      
+  +------`,
+            `  +-----+
+  |     |
+  |     😵
+  |    /|\\
+  |     |
+  |      
+  +------`,
+            `  +-----+
+  |     |
+  |     😵
+  |    /|\\
+  |     |
+  |    / 
+  +------`,
+            `  +-----+
+  |     |
+  |     😵
+  |    /|\\
+  |     |
+  |    / \\
+  +------`
+        ];
+
+        let currentWord = '';
+        let currentHint = '';
+        let guessedLetters = [];
+        let wrongLetters = [];
+        let wrongGuesses = 0;
+        let gameOver = false;
+        let wins = parseInt(localStorage.getItem('hangman-wins') || '0');
+        let losses = parseInt(localStorage.getItem('hangman-losses') || '0');
+        let hintShown = false;
+
+        function initGame() {
+            updateScores();
+            createKeyboard();
+            newGame();
+        }
+
+        function updateScores() {
+            document.getElementById('wins').textContent = wins;
+            document.getElementById('losses').textContent = losses;
+        }
+
+        function createKeyboard() {
+            const keyboard = document.getElementById('keyboard');
+            const letters = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
+            
+            keyboard.innerHTML = '';
+            for (let letter of letters) {
+                const key = document.createElement('button');
+                key.className = 'key';
+                key.textContent = letter;
+                key.onclick = () => guessLetter(letter);
+                keyboard.appendChild(key);
+            }
+        }
+
+        function newGame() {
+            const randomIndex = Math.floor(Math.random() * words.length);
+            currentWord = words[randomIndex].word;
+            currentHint = words[randomIndex].hint;
+            
+            guessedLetters = [];
+            wrongLetters = [];
+            wrongGuesses = 0;
+            gameOver = false;
+            hintShown = false;
+            
+            updateDisplay();
+            updateHangman();
+            updateWrongLetters();
+            updateAttempts();
+            hideMessage();
+            
+            // Reset keyboard
+            const keys = document.querySelectorAll('.key');
+            keys.forEach(key => {
+                key.disabled = false;
+                key.className = 'key';
+            });
+            
+            // Hide hint initially
+            document.getElementById('hint').style.display = 'none';
+        }
+
+        function updateDisplay() {
+            let display = '';
+            for (let letter of currentWord) {
+                if (guessedLetters.includes(letter)) {
+                    display += letter + ' ';
+                } else {
+                    display += '_ ';
+                }
+            }
+            document.getElementById('wordDisplay').textContent = display.trim();
+        }
+
+        function updateHangman() {
+            document.getElementById('hangman').textContent = hangmanStages[wrongGuesses];
+        }
+
+        function updateWrongLetters() {
+            document.getElementById('wrongLetters').textContent = wrongLetters.join(' ');
+        }
+
+        function updateAttempts() {
+            document.getElementById('attempts').textContent = 6 - wrongGuesses;
+        }
+
+        function playSound(frequency, duration, type = 'sine') {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playCorrectSound() {
+            // Sonido de acierto: Do-Mi-Sol (acorde mayor)
+            playSound(523.25, 0.2); // Do
+            setTimeout(() => playSound(659.25, 0.2), 100); // Mi
+            setTimeout(() => playSound(783.99, 0.3), 200); // Sol
+        }
+
+        function playIncorrectSound() {
+            // Sonido de error: frecuencias descendentes
+            playSound(300, 0.15);
+            setTimeout(() => playSound(250, 0.15), 150);
+            setTimeout(() => playSound(200, 0.2), 300);
+        }
+
+        function guessLetter(letter) {
+            if (gameOver || guessedLetters.includes(letter)) return;
+            
+            guessedLetters.push(letter);
+            const key = [...document.querySelectorAll('.key')].find(k => k.textContent === letter);
+            key.disabled = true;
+            
+            if (currentWord.includes(letter)) {
+                key.classList.add('correct');
+                playCorrectSound();
+                updateDisplay();
+                checkWin();
+            } else {
+                key.classList.add('incorrect');
+                playIncorrectSound();
+                wrongLetters.push(letter);
+                wrongGuesses++;
+                updateHangman();
+                updateWrongLetters();
+                updateAttempts();
+                checkLose();
+            }
+        }
+
+        function checkWin() {
+            if (currentWord.split('').every(letter => guessedLetters.includes(letter))) {
+                gameOver = true;
+                wins++;
+                localStorage.setItem('hangman-wins', wins.toString());
+                updateScores();
+                showMessage('¡Felicidades! 🎉 Has ganado. La palabra era: ' + currentWord, 'win');
+            }
+        }
+
+        function checkLose() {
+            if (wrongGuesses >= 6) {
+                gameOver = true;
+                losses++;
+                localStorage.setItem('hangman-losses', losses.toString());
+                updateScores();
+                showMessage('😔 Has perdido. La palabra era: ' + currentWord, 'lose');
+                
+                // Disable all keys
+                const keys = document.querySelectorAll('.key');
+                keys.forEach(key => key.disabled = true);
+            }
+        }
+
+        function showMessage(text, type) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+
+        function showHint() {
+            const hintElement = document.getElementById('hint');
+            hintElement.textContent = currentHint;
+            hintElement.style.display = 'block';
+            hintShown = true;
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', function(event) {
+            const letter = event.key.toUpperCase();
+            if (letter.match(/[A-ZÑ]/) && letter.length === 1) {
+                guessLetter(letter);
+            }
+        });
+
+        // Initialize game when page loads
+        initGame();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'95d4fa1e270a34a7',t:'MTc1MjIwMjA1NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
