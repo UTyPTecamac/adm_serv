@@ -1,0 +1,764 @@
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuestionario de Repaso: Virtualización e Hipervisores</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            aspect-ratio: 16/9;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .quiz-container {
+            aspect-ratio: 16/9;
+            max-height: 100vh;
+            max-width: 100vw;
+        }
+        
+        .question-card {
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(23, 97, 41, 0.1);
+        }
+        
+        .option-btn {
+            transition: all 0.2s ease;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .option-btn:hover {
+            border-color: #176129;
+            background-color: rgba(23, 97, 41, 0.05);
+            transform: translateY(-1px);
+        }
+        
+        .option-btn.correct {
+            background-color: #176129;
+            border-color: #176129;
+            color: white;
+            animation: correctPulse 0.6s ease;
+        }
+        
+        .option-btn.incorrect {
+            background-color: #dc2626;
+            border-color: #dc2626;
+            color: white;
+            animation: shake 0.5s ease;
+        }
+        
+        @keyframes correctPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .feedback-modal {
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .timer {
+            background: linear-gradient(135deg, #176129, #22c55e);
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #176129, #22c55e);
+            transition: width 0.3s ease;
+        }
+        
+        .icon-bounce {
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
+            40%, 43% { transform: translateY(-10px); }
+            70% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="bg-white">
+    <div class="quiz-container w-full h-full flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-green-600 to-green-500 text-white p-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-server text-2xl icon-bounce"></i>
+                <h1 class="text-xl font-bold">Virtualización e Hipervisores</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="timer px-4 py-2 rounded-full text-sm font-semibold flex items-center space-x-2">
+                    <i class="fas fa-clock"></i>
+                    <span id="timer">05:00</span>
+                </div>
+                <div class="text-sm font-medium">
+                    <span id="current-question">1</span> / <span id="total-questions">10</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="bg-gray-200 h-2">
+            <div id="progress-bar" class="progress-bar h-full" style="width: 10%"></div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 p-6 flex items-center justify-center">
+            <div class="question-card bg-white rounded-2xl p-8 w-full max-w-4xl border border-gray-100">
+                <div class="mb-6">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                            <span id="question-number">1</span>
+                        </div>
+                        <h2 class="text-xl font-semibold text-gray-800">Pregunta <span id="question-counter">1</span></h2>
+                    </div>
+                    <p id="question-text" class="text-lg text-gray-700 leading-relaxed">
+                        ¿Cuál es la característica principal de un hipervisor Tipo I o "bare-metal"?
+                    </p>
+                </div>
+
+                <div id="options-container" class="space-y-3 mb-6">
+                    <button class="option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-gray-300 rounded-full"></div>
+                        <span>Se instala sobre un sistema operativo de propósito general preexistente.</span>
+                    </button>
+                    <button class="option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-gray-300 rounded-full"></div>
+                        <span>Se instala directamente sobre el hardware físico de un servidor sin depender de un SO preexistente.</span>
+                    </button>
+                    <button class="option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-gray-300 rounded-full"></div>
+                        <span>Es ideal para entornos de desarrollo y pruebas individuales.</span>
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-2 text-sm text-gray-500">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Selecciona la respuesta correcta</span>
+                    </div>
+                    <button id="help-btn" class="text-gray-400 hover:text-blue-500 p-2 rounded-full hover:bg-blue-50 transition-all duration-200" title="Ver pista">
+                        <i class="fas fa-question-circle text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Score Display -->
+        <div class="bg-gray-50 p-4 flex justify-center items-center space-x-6">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-check-circle text-green-600"></i>
+                <span class="text-sm font-medium">Correctas: <span id="correct-count">0</span></span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-times-circle text-red-500"></i>
+                <span class="text-sm font-medium">Incorrectas: <span id="incorrect-count">0</span></span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-percentage text-blue-500"></i>
+                <span class="text-sm font-medium">Puntuación: <span id="score-percentage">0%</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden feedback-modal">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl mx-4 text-center">
+            <div class="text-6xl mb-4">
+                <i class="fas fa-lightbulb text-yellow-500"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-4 text-blue-600">💡 Pista</h3>
+            <p id="help-hint" class="text-gray-700 leading-relaxed mb-6"></p>
+            <button id="close-help-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200">
+                Entendido <i class="fas fa-check ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden feedback-modal">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl mx-4 text-center">
+            <div id="feedback-icon" class="text-6xl mb-4"></div>
+            <h3 id="feedback-title" class="text-2xl font-bold mb-4"></h3>
+            <p id="feedback-explanation" class="text-gray-700 leading-relaxed mb-6"></p>
+            <button id="continue-btn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200">
+                Continuar <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Final Results Modal -->
+    <div id="results-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden feedback-modal">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl mx-4 text-center">
+            <div id="final-icon" class="text-6xl mb-4"></div>
+            <h3 class="text-3xl font-bold mb-4">¡Cuestionario Completado!</h3>
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <div class="text-2xl font-bold text-green-600" id="final-correct">0</div>
+                    <div class="text-sm text-gray-600">Correctas</div>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <div class="text-2xl font-bold text-red-500" id="final-incorrect">0</div>
+                    <div class="text-sm text-gray-600">Incorrectas</div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="text-2xl font-bold text-blue-500" id="final-percentage">0%</div>
+                    <div class="text-sm text-gray-600">Puntuación</div>
+                </div>
+            </div>
+            <button id="restart-btn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200">
+                <i class="fas fa-redo mr-2"></i> Reiniciar Cuestionario
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Audio Context for sounds
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Sound generation functions
+        function playCorrectSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+            oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+            oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+        
+        function playIncorrectSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(220, audioContext.currentTime); // A3
+            oscillator.frequency.setValueAtTime(196, audioContext.currentTime + 0.2); // G3
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.4);
+        }
+        
+        function playClickSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // Complete question bank
+        const questionBank = [
+            {
+                question: "¿Cuál es la característica principal de un hipervisor Tipo I o \"bare-metal\"?",
+                options: [
+                    "Se instala sobre un sistema operativo de propósito general preexistente.",
+                    "Se instala directamente sobre el hardware físico de un servidor sin depender de un SO preexistente.",
+                    "Es ideal para entornos de desarrollo y pruebas individuales."
+                ],
+                correct: 1,
+                hint: "Piensa en el término 'bare-metal' - significa que no hay nada entre el hipervisor y el hardware físico del servidor.",
+                explanation: "Los hipervisores Tipo I, también conocidos como \"bare-metal\" o nativos, se instalan directamente sobre el hardware físico del servidor, lo que les permite un acceso y control directo sobre los recursos subyacentes sin la intermediación de un sistema operativo anfitrión convencional."
+            },
+            {
+                question: "¿Qué tecnología de virtualización de contenedores es soportada de forma nativa por Proxmox VE?",
+                options: [
+                    "Docker",
+                    "Kubernetes",
+                    "LXC (Linux Containers)"
+                ],
+                correct: 2,
+                hint: "Proxmox VE integra tanto máquinas virtuales como contenedores. Busca la tecnología de contenedores que menciona 'Linux' en su nombre.",
+                explanation: "Proxmox VE ofrece soporte nativo para contenedores LXC, integrando máquinas virtuales y contenedores en una sola plataforma de virtualización."
+            },
+            {
+                question: "¿Cuál de los siguientes hipervisores es de Tipo 2 (Hosted)?",
+                options: [
+                    "Proxmox VE",
+                    "oVirt",
+                    "VirtualBox"
+                ],
+                correct: 2,
+                hint: "Los hipervisores Tipo 2 se ejecutan sobre un sistema operativo existente. Piensa en cuál de estas opciones puedes instalar en tu computadora personal.",
+                explanation: "VirtualBox es clasificado como un hipervisor de Tipo 2 (Hosted), ya que se ejecuta sobre un sistema operativo anfitrión, a diferencia de Proxmox VE y oVirt que son de Tipo 1 (Bare Metal)."
+            },
+            {
+                question: "¿Qué ventaja clave de los hipervisores Tipo I se traduce en una significativa reducción de costos energéticos y de espacio físico en el centro de datos?",
+                options: [
+                    "Mayor Seguridad y Aislamiento",
+                    "Eficiencia y Optimización de Recursos",
+                    "Portabilidad y Recuperación ante Desastres Mejorada"
+                ],
+                correct: 1,
+                hint: "La pregunta menciona 'reducción de costos energéticos y espacio físico'. Piensa en qué ventaja permite usar menos servidores físicos para hacer el mismo trabajo.",
+                explanation: "La eficiencia y optimización de recursos, lograda por la consolidación de servidores, mejora drásticamente la utilización del hardware, lo que se traduce en una reducción de costos de hardware, consumo de energía (hasta un 40% de ahorro) y espacio físico."
+            },
+            {
+                question: "¿Qué componente de hardware es considerado el más crítico para un hipervisor Tipo I, encargado de ejecutar las instrucciones de las máquinas virtuales y gestionar la virtualización asistida por hardware?",
+                options: [
+                    "Memoria RAM",
+                    "Procesador (CPU)",
+                    "Almacenamiento"
+                ],
+                correct: 1,
+                hint: "La pregunta menciona 'ejecutar instrucciones' y 'virtualización asistida por hardware'. ¿Qué componente es el cerebro del computador que ejecuta todas las instrucciones?",
+                explanation: "El procesador (CPU) es el componente más crítico para un hipervisor Tipo I, siendo responsable de ejecutar las instrucciones de las máquinas virtuales y de gestionar la virtualización asistida por hardware."
+            },
+            {
+                question: "Para Microsoft Hyper-V, ¿qué tecnología de Traducción de Direcciones de Segundo Nivel (SLAT) es un requisito fundamental?",
+                options: [
+                    "Intel VT-x o AMD-V",
+                    "NX bit o XD bit",
+                    "EPT (Intel) o NPT (AMD)"
+                ],
+                correct: 2,
+                hint: "SLAT significa 'Traducción de Direcciones de Segundo Nivel'. Busca la opción que mencione tecnologías específicas para Intel y AMD relacionadas con tablas de páginas extendidas.",
+                explanation: "Para Microsoft Hyper-V, la compatibilidad con SLAT, específicamente EPT para Intel o NPT para AMD, es un requisito fundamental para la seguridad basada en virtualización y la protección de la memoria."
+            },
+            {
+                question: "¿Qué tipo de memoria RAM se recomienda para implementaciones de host físico en entornos virtualizados para prevenir errores de datos y asegurar estabilidad?",
+                options: [
+                    "DDR3",
+                    "ECC (Error Correcting Code)",
+                    "SODIMM"
+                ],
+                correct: 1,
+                hint: "La pregunta enfatiza 'prevenir errores de datos'. Busca la opción que tenga en su nombre algo relacionado con corrección de errores.",
+                explanation: "Se recomienda el uso de memoria ECC (Error Correcting Code) o tecnología similar, ya que ayuda a prevenir errores de datos, lo cual es crucial para la estabilidad en entornos de servidor."
+            },
+            {
+                question: "¿Cuál es uno de los mayores factores que degradan el rendimiento en la virtualización debido a una dotación insuficiente de RAM?",
+                options: [
+                    "Mayor uso de caché de CPU",
+                    "El host comienza a intercambiar (swapping) datos de las VMs al disco",
+                    "Aumento de la velocidad de la red"
+                ],
+                correct: 1,
+                hint: "Cuando no hay suficiente RAM, el sistema debe usar el disco duro como memoria temporal. ¿Cómo se llama este proceso de intercambio entre RAM y disco?",
+                explanation: "Una dotación insuficiente de RAM es uno de los mayores factores que degradan el rendimiento, ya que el host puede comenzar a intercambiar datos de las VMs al disco (swapping), o los sistemas operativos de las VMs pueden empezar a paginar, lo que consume IOPS y degrada el rendimiento."
+            },
+            {
+                question: "¿Qué tipo de discos se recomiendan para el almacenamiento de sistemas operativos y aplicaciones de máquinas virtuales debido a su alta velocidad y IOPS?",
+                options: [
+                    "Discos HDD convencionales",
+                    "Discos SAS",
+                    "Discos SSD NVMe"
+                ],
+                correct: 2,
+                hint: "La pregunta enfatiza 'alta velocidad y IOPS'. Los discos de estado sólido son más rápidos que los mecánicos. ¿Cuál es la tecnología más moderna y rápida de SSD?",
+                explanation: "Se recomiendan los discos SSD NVMe para el almacenamiento de los sistemas operativos y aplicaciones de las máquinas virtuales debido a su alta velocidad y IOPS (operaciones de entrada/salida por segundo)."
+            },
+            {
+                question: "Para la redundancia y el rendimiento del almacenamiento de datos en un entorno virtualizado, ¿qué tipo de volumen RAID se recomienda generalmente?",
+                options: [
+                    "RAID 0",
+                    "RAID 5",
+                    "RAID 10"
+                ],
+                correct: 2,
+                hint: "La pregunta pide TANTO redundancia COMO rendimiento. RAID 0 es rápido pero sin redundancia, RAID 1 tiene redundancia. ¿Cuál combina ambos números?",
+                explanation: "Para la redundancia y el rendimiento, se recomienda el uso de volúmenes RAID 10 para el almacenamiento de datos en entornos virtualizados, ya que combina las ventajas de RAID 1 (redundancia) y RAID 0 (rendimiento)."
+            },
+            {
+                question: "¿Cuál es una de las principales ventajas de oVirt para grandes empresas y centros de datos?",
+                options: [
+                    "Soporte nativo de contenedores LXC",
+                    "Gestión avanzada y escalabilidad empresarial",
+                    "Simplicidad para uso individual"
+                ],
+                correct: 1,
+                hint: "La pregunta menciona 'grandes empresas y centros de datos'. ¿Qué característica sería más importante para organizaciones grandes y complejas?",
+                explanation: "La infografía destaca que oVirt es ideal para grandes empresas y centros de datos debido a su gestión avanzada, consola web sofisticada y capacidad de escalabilidad empresarial."
+            },
+            {
+                question: "En un clúster de hipervisores, ¿qué es un requisito indispensable en cuanto a la compatibilidad de las CPUs?",
+                options: [
+                    "Deben tener la misma velocidad de reloj.",
+                    "Deben ser del mismo proveedor (Intel o AMD).",
+                    "Deben tener el mismo número de núcleos."
+                ],
+                correct: 1,
+                hint: "En un clúster, las VMs pueden migrar entre servidores. Los dos principales fabricantes de CPUs tienen arquitecturas diferentes. ¿Qué debe ser igual para garantizar compatibilidad?",
+                explanation: "En un grupo de recursos (clúster) de hipervisores, es crucial que el proveedor de la CPU (Intel o AMD) sea el mismo en todas las CPUs de todos los servidores del clúster para garantizar una amplia compatibilidad."
+            },
+            {
+                question: "¿Qué término se utiliza para describir máquinas virtuales inactivas u olvidadas que siguen consumiendo recursos y pueden obstaculizar el rendimiento de la infraestructura virtual?",
+                options: [
+                    "VMs fantasma",
+                    "VMs zombis",
+                    "VMs durmientes"
+                ],
+                correct: 1,
+                hint: "Piensa en términos de películas de terror. ¿Cómo se llaman los seres que están 'muertos' pero siguen 'vivos' consumiendo recursos sin propósito útil?",
+                explanation: "Las \"máquinas virtuales zombies\" son VMs inactivas u olvidadas que continúan consumiendo recursos, lo que puede obstaculizar el rendimiento general de la infraestructura virtual."
+            },
+            {
+                question: "¿Qué tecnología permite añadir o ajustar recursos de memoria a una VM mientras el sistema operativo invitado está en ejecución?",
+                options: [
+                    "Memoria Estática",
+                    "Memoria Dinámica (o Hot Add)",
+                    "Memoria Compartida"
+                ],
+                correct: 1,
+                hint: "La pregunta enfatiza 'mientras está en ejecución', es decir, sin apagar la VM. ¿Qué tipo de memoria permite cambios 'en caliente' o dinámicos?",
+                explanation: "Funcionalidades como la Memoria Dinámica (disponible en Hyper-V) o VMware Hot Add permiten añadir o ajustar recursos de memoria a una VM mientras el sistema operativo invitado está en ejecución."
+            },
+            {
+                question: "¿Qué nivel de velocidad de NICs (Network Interface Cards) es preferible para transferencias de datos rápidas y migraciones en vivo de VMs en entornos de producción?",
+                options: [
+                    "Gigabit (1 Gbps)",
+                    "10 Gbps o superiores",
+                    "100 Mbps"
+                ],
+                correct: 1,
+                hint: "La pregunta menciona 'entornos de producción' y 'migraciones en vivo'. Para transferir VMs completas rápidamente, se necesita mucho ancho de banda. ¿Cuál es la velocidad más alta?",
+                explanation: "Se recomienda una o más NIC de Gigabit o más rápidas, siendo las de 10 Gbps o superiores preferibles para transferencias de datos rápidas, migraciones en vivo de VMs y entornos de producción."
+            },
+            {
+                question: "¿Qué práctica es fundamental para la seguridad de un host con hipervisor, ayudando a limitar las superficies de ataque?",
+                options: [
+                    "Instalar múltiples roles de servidor en el host.",
+                    "Ejecutar los hipervisores en un host dedicado que no desempeñe funciones adicionales.",
+                    "Deshabilitar las actualizaciones de seguridad para evitar interrupciones."
+                ],
+                correct: 1,
+                hint: "La pregunta menciona 'limitar superficies de ataque'. En seguridad, menos servicios y funciones = menos vulnerabilidades. ¿Qué opción reduce la complejidad?",
+                explanation: "Es una práctica fundamental ejecutar los hipervisores en un host dedicado que no desempeñe funciones adicionales, lo que ayuda a limitar las superficies de ataque y mejorar la seguridad del sistema."
+            },
+            {
+                question: "En la optimización del rendimiento de las VMs, ¿qué tipo de archivos VHD (Virtual Hard Disk) se recomienda utilizar para una mejora del rendimiento?",
+                options: [
+                    "Dinámicos",
+                    "Fijos",
+                    "Passthrough"
+                ],
+                correct: 1,
+                hint: "Los archivos dinámicos crecen según se necesite, pero esto requiere procesamiento adicional. Los archivos de tamaño predeterminado evitan esta sobrecarga. ¿Cuál sería más rápido?",
+                explanation: "Utilizar archivos VHD (Virtual Hard Disk) fijos en lugar de dinámicos puede mejorar significativamente el rendimiento de las máquinas virtuales."
+            },
+            {
+                question: "Para evitar cuellos de botella en las operaciones de E/S del almacenamiento, ¿qué se recomienda hacer con las máquinas virtuales con cargas de trabajo intensivas?",
+                options: [
+                    "Consolidarlas en un único volumen de almacenamiento.",
+                    "Organizarlas en volúmenes de almacenamiento separados.",
+                    "Asignarles menos recursos de almacenamiento."
+                ],
+                correct: 1,
+                hint: "Si varias VMs compiten por el mismo disco, se crean cuellos de botella. ¿Cómo se puede distribuir la carga de E/S para evitar competencia?",
+                explanation: "Para evitar cuellos de botella en las operaciones de E/S, se recomienda organizar las máquinas virtuales con cargas de trabajo intensivas en volúmenes de almacenamiento separados, asegurando que cada VM tenga suficientes recursos."
+            },
+            {
+                question: "¿Cuál de las siguientes es una ventaja clave de la implementación de hipervisores Tipo I en entornos empresariales relacionada con la capacidad de mover cargas de trabajo entre diferentes hosts físicos sin interrupciones?",
+                options: [
+                    "Mayor Seguridad y Aislamiento",
+                    "Rendimiento Superior",
+                    "Portabilidad y Recuperación ante Desastres Mejorada (migración en vivo o vMotion)"
+                ],
+                correct: 2,
+                hint: "La pregunta enfatiza 'mover cargas de trabajo entre hosts sin interrupciones'. ¿Qué ventaja está directamente relacionada con la capacidad de transportar y migrar VMs?",
+                explanation: "La portabilidad de las máquinas virtuales permite mover cargas de trabajo entre diferentes hosts físicos sin interrupciones (migración en vivo o vMotion), lo cual es crucial para la recuperación ante desastres y la agilidad operativa."
+            },
+            {
+                question: "¿Qué enfoque de escalabilidad implica aumentar el número de componentes individuales, como añadir más nodos de hipervisor a un clúster?",
+                options: [
+                    "Escalabilidad Vertical",
+                    "Escalabilidad Horizontal",
+                    "Escalabilidad Dinámica"
+                ],
+                correct: 1,
+                explanation: "La escalabilidad horizontal en un entorno virtualizado se logra aumentando el número de componentes individuales, como añadir más nodos de hipervisor a un clúster."
+            }
+        ];
+
+        // Selected questions for current quiz session
+        let questions = [];
+
+        // Function to randomly select 10 questions and shuffle options
+        function selectRandomQuestions() {
+            const shuffled = [...questionBank].sort(() => 0.5 - Math.random());
+            questions = shuffled.slice(0, 10).map(question => {
+                // Create array of options with their original indices
+                const optionsWithIndex = question.options.map((option, index) => ({
+                    text: option,
+                    originalIndex: index
+                }));
+                
+                // Shuffle the options
+                const shuffledOptions = optionsWithIndex.sort(() => 0.5 - Math.random());
+                
+                // Find new position of correct answer
+                const newCorrectIndex = shuffledOptions.findIndex(option => option.originalIndex === question.correct);
+                
+                return {
+                    ...question,
+                    options: shuffledOptions.map(option => option.text),
+                    correct: newCorrectIndex
+                };
+            });
+        }
+
+        // Quiz state
+        let currentQuestion = 0;
+        let correctAnswers = 0;
+        let incorrectAnswers = 0;
+        let timeLeft = 300; // 5 minutes
+        let timerInterval;
+        let answered = false;
+
+        // DOM elements
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const helpBtn = document.getElementById('help-btn');
+        const helpModal = document.getElementById('help-modal');
+        const feedbackModal = document.getElementById('feedback-modal');
+        const resultsModal = document.getElementById('results-modal');
+        const timerElement = document.getElementById('timer');
+        const progressBar = document.getElementById('progress-bar');
+
+        // Initialize quiz
+        function initQuiz() {
+            selectRandomQuestions();
+            startTimer();
+            loadQuestion();
+            updateUI();
+        }
+
+        // Timer functions
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimer();
+                if (timeLeft <= 0) {
+                    endQuiz();
+                }
+            }, 1000);
+        }
+
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Load current question
+        function loadQuestion() {
+            const question = questions[currentQuestion];
+            questionText.textContent = question.question;
+            
+            const options = optionsContainer.querySelectorAll('.option-btn');
+            options.forEach((btn, index) => {
+                const span = btn.querySelector('span');
+                span.textContent = question.options[index];
+                btn.className = 'option-btn w-full p-4 text-left rounded-xl bg-white hover:bg-gray-50 flex items-center space-x-3';
+                btn.disabled = false;
+                
+                // Reset bullet point
+                const bullet = btn.querySelector('div');
+                bullet.className = 'w-3 h-3 bg-gray-300 rounded-full';
+            });
+            
+            answered = false;
+        }
+
+        // Handle option selection
+        function selectOption(selectedIndex) {
+            if (answered) return;
+            
+            playClickSound();
+            answered = true;
+            
+            const question = questions[currentQuestion];
+            const options = optionsContainer.querySelectorAll('.option-btn');
+            
+            options.forEach((btn, index) => {
+                btn.disabled = true;
+                if (index === question.correct) {
+                    btn.classList.add('correct');
+                } else if (index === selectedIndex && index !== question.correct) {
+                    btn.classList.add('incorrect');
+                }
+            });
+            
+            const isCorrect = selectedIndex === question.correct;
+            
+            setTimeout(() => {
+                if (isCorrect) {
+                    correctAnswers++;
+                    playCorrectSound();
+                    showFeedback(true, question.explanation);
+                } else {
+                    incorrectAnswers++;
+                    playIncorrectSound();
+                    showFeedback(false, question.explanation);
+                }
+                updateUI();
+            }, 1000);
+        }
+
+        // Show feedback modal
+        function showFeedback(isCorrect, explanation) {
+            const feedbackIcon = document.getElementById('feedback-icon');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackExplanation = document.getElementById('feedback-explanation');
+            
+            if (isCorrect) {
+                feedbackIcon.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
+                feedbackTitle.textContent = '¡Correcto!';
+                feedbackTitle.className = 'text-2xl font-bold mb-4 text-green-600';
+            } else {
+                feedbackIcon.innerHTML = '<i class="fas fa-times-circle text-red-500"></i>';
+                feedbackTitle.textContent = 'Incorrecto';
+                feedbackTitle.className = 'text-2xl font-bold mb-4 text-red-600';
+            }
+            
+            feedbackExplanation.textContent = explanation;
+            feedbackModal.classList.remove('hidden');
+        }
+
+        // Show help modal
+        function showHelp() {
+            if (answered) return; // Don't show help after answering
+            
+            const question = questions[currentQuestion];
+            document.getElementById('help-hint').textContent = question.hint;
+            helpModal.classList.remove('hidden');
+            playClickSound();
+        }
+
+        // Close help modal
+        function closeHelp() {
+            helpModal.classList.add('hidden');
+        }
+
+        // Continue to next question
+        function continueQuiz() {
+            feedbackModal.classList.add('hidden');
+            
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                loadQuestion();
+                updateUI();
+            } else {
+                endQuiz();
+            }
+        }
+
+        // Update UI elements
+        function updateUI() {
+            document.getElementById('current-question').textContent = currentQuestion + 1;
+            document.getElementById('question-number').textContent = currentQuestion + 1;
+            document.getElementById('question-counter').textContent = currentQuestion + 1;
+            document.getElementById('correct-count').textContent = correctAnswers;
+            document.getElementById('incorrect-count').textContent = incorrectAnswers;
+            
+            const totalAnswered = correctAnswers + incorrectAnswers;
+            const percentage = totalAnswered > 0 ? Math.round((correctAnswers / totalAnswered) * 100) : 0;
+            document.getElementById('score-percentage').textContent = percentage + '%';
+            
+            const progress = ((currentQuestion + 1) / questions.length) * 100;
+            progressBar.style.width = progress + '%';
+        }
+
+        // End quiz
+        function endQuiz() {
+            clearInterval(timerInterval);
+            
+            const totalAnswered = correctAnswers + incorrectAnswers;
+            const percentage = totalAnswered > 0 ? Math.round((correctAnswers / totalAnswered) * 100) : 0;
+            
+            document.getElementById('final-correct').textContent = correctAnswers;
+            document.getElementById('final-incorrect').textContent = incorrectAnswers;
+            document.getElementById('final-percentage').textContent = percentage + '%';
+            
+            const finalIcon = document.getElementById('final-icon');
+            if (percentage >= 80) {
+                finalIcon.innerHTML = '<i class="fas fa-trophy text-yellow-500"></i>';
+            } else if (percentage >= 60) {
+                finalIcon.innerHTML = '<i class="fas fa-medal text-blue-500"></i>';
+            } else {
+                finalIcon.innerHTML = '<i class="fas fa-graduation-cap text-gray-500"></i>';
+            }
+            
+            resultsModal.classList.remove('hidden');
+        }
+
+        // Restart quiz
+        function restartQuiz() {
+            currentQuestion = 0;
+            correctAnswers = 0;
+            incorrectAnswers = 0;
+            timeLeft = 300;
+            answered = false;
+            
+            resultsModal.classList.add('hidden');
+            feedbackModal.classList.add('hidden');
+            
+            initQuiz();
+        }
+
+        // Event listeners
+        optionsContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.option-btn');
+            if (btn) {
+                const index = Array.from(optionsContainer.children).indexOf(btn);
+                selectOption(index);
+            }
+        });
+
+        helpBtn.addEventListener('click', showHelp);
+        document.getElementById('close-help-btn').addEventListener('click', closeHelp);
+        document.getElementById('continue-btn').addEventListener('click', continueQuiz);
+        document.getElementById('restart-btn').addEventListener('click', restartQuiz);
+
+        // Initialize quiz on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Enable audio context on user interaction
+            document.addEventListener('click', () => {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            }, { once: true });
+            
+            initQuiz();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9661e99f767c4cc1',t:'MTc1MzY3OTg3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
