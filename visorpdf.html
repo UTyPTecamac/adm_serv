@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Presentación PDF con Medalla de Logro</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+    canvas {
+      max-width: 100%;
+      max-height: 100%;
+      opacity: 0;
+      transition: opacity 0.5s;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+    .nav-button {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background-color: #6c757d;
+      border: none;
+      padding: 15px;
+      font-size: 24px;
+      color: #ffffff;
+      cursor: pointer;
+      z-index: 10;
+      border-radius: 10px;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: background-color 0.3s, box-shadow 0.3s;
+    }
+    .nav-button:hover {
+      background-color: #5a6268;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    .nav-button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background-color: #6c757d;
+        box-shadow: none;
+    }
+    #prev-button {
+      left: 10px;
+    }
+    #next-button {
+      right: 10px;
+    }
+    
+    #bottom-info-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 700px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px; /* Espacio entre la barra y la medalla */
+    }
+
+    /* Contenedor de la barra de progreso */
+    #progress-container {
+      flex-grow: 1;
+      height: 12px;
+      background-color: #e9ecef;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    #progress-bar {
+      position: relative;
+      height: 100%;
+      width: 0%;
+      background-color: #28a745;
+      transition: width 0.3s ease-in-out;
+      overflow: hidden;
+    }
+    #progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 250%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.2),
+        rgba(255, 255, 255, 0.2) 10px,
+        transparent 10px,
+        transparent 20px
+      );
+      animation: progress-animation 2s linear infinite;
+    }
+    @keyframes progress-animation {
+      from { transform: translateX(0); }
+      to { transform: translateX(-100px); }
+    }
+    
+    /* Estilos para el reloj */
+    #timer {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      padding: 8px 15px;
+      background-color: #fff;
+      border-radius: 20px;
+      border: 1px solid #28a745;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      font-family: sans-serif;
+      font-size: 16px;
+      color: #343a40;
+    }
+    #timer .icon {
+      margin-right: 8px;
+    }
+
+    /* Estilos para el icono de medalla SVG */
+    #trophy-icon {
+      width: 45px; /* Tamaño más grande para la medalla */
+      height: 45px;
+      display: none; /* Oculto por defecto */
+      animation: medal-bounce 0.8s infinite alternate; /* Animación de rebote sutil */
+    }
+    @keyframes medal-bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-8px); } /* Rebote más suave */
+    }
+
+    #error-message {
+      color: red;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <button id="prev-button" class="nav-button">&lt;</button>
+  <canvas id="pdf-canvas"></canvas>
+  <button id="next-button" class="nav-button">&gt;</button>
+  
+  <div id="bottom-info-container">
+    <div id="progress-container">
+      <div id="progress-bar"></div>
+    </div>
+    <div id="trophy-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-award">
+        <circle cx="12" cy="8" r="7"></circle>
+        <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.89"></polyline>
+      </svg>
+    </div>
+  </div>
+  <div id="timer"><span class="icon">⏰</span><span id="timer-text">00:00</span></div>
+  
+  <div id="error-message"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const pdfUrl = params.get('pdf');
+
+    if (!pdfUrl) {
+        document.getElementById("error-message").textContent = "Error: No se encontró la dirección del PDF en la URL. Por favor, agregue ?pdf=URL_DEL_PDF";
+        document.getElementById("prev-button").disabled = true;
+        document.getElementById("next-button").disabled = true;
+    } else {
+        let pdfDoc = null;
+        let pageNum = 1;
+        const canvas = document.getElementById("pdf-canvas");
+        const ctx = canvas.getContext("2d");
+        const prevButton = document.getElementById("prev-button");
+        const nextButton = document.getElementById("next-button");
+        const progressBar = document.getElementById("progress-bar");
+        const timerText = document.getElementById("timer-text");
+        const trophyIcon = document.getElementById("trophy-icon"); 
+        let startTime = Date.now();
+        
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+        pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
+            pdfDoc = pdf;
+            renderPage(pageNum);
+            updateButtons();
+            setInterval(updateTimer, 1000);
+        }).catch(error => {
+            document.getElementById("error-message").textContent = "Error al cargar el PDF: " + error.message;
+            console.error("Error al cargar el PDF:", error);
+        });
+
+        function renderPage(num) {
+            canvas.style.opacity = 0;
+            pdfDoc.getPage(num).then(page => {
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
+                    canvas.style.opacity = 1;
+                });
+            });
+            updateButtons();
+            updateProgressBar();
+        }
+
+        function prevPage() {
+            if (pageNum > 1) {
+                pageNum--;
+                renderPage(pageNum);
+            }
+        }
+
+        function nextPage() {
+            if (pageNum < pdfDoc.numPages) {
+                pageNum++;
+                renderPage(pageNum);
+            }
+        }
+
+        function updateButtons() {
+            prevButton.disabled = (pageNum <= 1);
+            nextButton.disabled = (pageNum >= pdfDoc.numPages);
+
+            if (pdfDoc && pageNum === pdfDoc.numPages) {
+                trophyIcon.style.display = 'block';
+            } else {
+                trophyIcon.style.display = 'none';
+            }
+        }
+
+        function updateProgressBar() {
+            const progress = (pageNum / pdfDoc.numPages) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+        
+        function updateTimer() {
+            const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsedTime / 60);
+            const seconds = elapsedTime % 60;
+            const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            timerText.textContent = formattedTime;
+        }
+
+        prevButton.addEventListener("click", prevPage);
+        nextButton.addEventListener("click", nextPage);
+    }
+  </script>
+</body>
+</html>
