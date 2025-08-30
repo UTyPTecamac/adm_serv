@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Presentación PDF (Optimizada)</title>
+
+  <!-- Performance hints -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+
+  <!-- pdf.js desde CDN, sin bloquear el render (defer) -->
+  <script defer src="./pdf.min.js"></script>
+  <script defer src="./pdf.worker.min.js"></script>
+
+  <style>
+    html, body {
+      margin: 0; padding: 0; height: 100%; width: 100%; background: #f0f4f8; display: flex;
+      justify-content: center; align-items: center; overflow: hidden; position: relative;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    }
+    canvas {
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); border-radius: 8px;
+      visibility: hidden; /* Oculta el canvas hasta que esté listo */
+      will-change: transform; /* Sugerir a GPU */
+    }
+    #glass-overlay {
+      position: absolute; inset: 0; background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(8px) saturate(150%); -webkit-backdrop-filter: blur(8px) saturate(150%);
+      opacity: 0; pointer-events: none; transition: opacity 240ms ease-in-out; z-index: 15;
+    }
+    #glass-overlay.active { opacity: 1; }
+
+    .nav-button {
+      position: absolute; top: 50%; transform: translateY(-50%); background-color: #6C7A89;
+      border: none; padding: 15px; font-size: 24px; color: #ffffff; cursor: pointer;
+      z-index: 20; border-radius: 10px; width: 50px; height: 50px; display: flex;
+      justify-content: center; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: background-color 0.2s, box-shadow 0.2s;
+    }
+    .nav-button:hover { background-color: #5A6673; box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+    .nav-button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #prev-button { left: 10px; }
+    #next-button { right: 10px; }
+
+    #main-controls-container {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      width: 50%; max-width: 500px; display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 8px 12px; background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 20;
+    }
+    #left-controls, #center-controls, #right-controls { display: flex; align-items: center; gap: 8px; }
+    #center-controls { flex-grow: 1; }
+    #progress-container { flex-grow: 1; height: 12px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; }
+    #progress-bar { height: 100%; width: 0%; background-color: #28a745; transition: width 0.2s ease-in-out; }
+    #timer { display: flex; align-items: center; padding: 8px 15px; background-color: #fff; border-radius: 20px; border: 1px solid #28a745; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial; font-size: 16px; color: #343a40; }
+    #timer .icon { margin-right: 8px; }
+    .control-button { background-color: #6C7A89; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; cursor: pointer; transition: background-color 0.15s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); color: #fff; display: flex; justify-content: center; align-items: center; }
+    .control-button:hover { background-color: #5A6673; }
+    .control-button.active { background-color: #28a745; color: #fff; }
+
+    #trophy-icon {
+      width: 45px; height: 45px; display: none; animation: medal-bounce 0.8s infinite alternate;
+      font-size: 32px; display: flex; justify-content: center; align-items: center;
+    }
+    @keyframes medal-bounce { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+
+    #trophy-explosion-container {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 1px; height: 1px; overflow: visible; pointer-events: none; z-index: 25;
+    }
+    .explosion-trophy {
+      position: absolute; font-size: 40px; opacity: 0; white-space: nowrap;
+      filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.7));
+      animation: trophyExplode 3s ease-out forwards;
+    }
+    @keyframes trophyExplode {
+      0% { opacity: 0; transform: translate(0, 0) scale(0.5); filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.7)); }
+      12% { opacity: 1; transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(1); }
+      55% { opacity: 1; transform: translate(calc(var(--dx, 0px) * 1.4), calc(var(--dy, 0px) * 1.4)) scale(1.08); filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.9)); }
+      100% { opacity: 0; transform: translate(calc(var(--dx, 0px) * 2), calc(var(--dy, 0px) * 2)) scale(0.85); filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.3)); }
+    }
+
+    #error-message { color: red; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+  </style>
+</head>
+<body>
+  <button id="prev-button" class="nav-button" aria-label="Anterior">&lt;</button>
+  <button id="next-button" class="nav-button" aria-label="Siguiente">&gt;</button>
+  <canvas id="pdf-canvas"></canvas>
+  <div id="glass-overlay" aria-hidden="true"></div>
+  <div id="trophy-explosion-container" aria-hidden="true"></div>
+
+  <div id="main-controls-container" role="toolbar" aria-label="Controles de PDF">
+    <div id="left-controls">
+      <button class="control-button" id="reset-zoom-btn" title="Restablecer Zoom" aria-label="Restablecer Zoom">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+      </button>
+      <button class="control-button" id="zoom-in-btn" title="Acercar" aria-label="Acercar">+</button>
+      <button class="control-button" id="zoom-out-btn" title="Alejar" aria-label="Alejar">-</button>
+      <button class="control-button" id="hand-btn" title="Mover" aria-label="Mover">✋</button>
+    </div>
+    <div id="center-controls">
+      <div id="progress-container" aria-label="Progreso"><div id="progress-bar"></div></div>
+    </div>
+    <div id="right-controls">
+      <div id="trophy-icon">🏆</div>
+      <div id="timer"><span class="icon">⏰</span><span id="timer-text">00:00</span></div>
+    </div>
+  </div>
+
+  <div id="error-message" role="alert"></div>
+
+  <audio id="victory-sound" src="https://cdn.pixabay.com/audio/2025/06/06/audio_c8f5ec4c7e.mp3" preload="auto"></audio>
+
+  <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    // ====== Parámetros ======
+    const params = new URLSearchParams(window.location.search);
+    const pdfUrl = params.get('pdf');
+
+    if (!pdfUrl) {
+      document.getElementById("error-message").textContent = "Error: No se encontró la dirección del PDF en la URL. Por favor, agregue ?pdf=URL_DEL_PDF";
+      return;
+    }
+
+    // ====== Estado ======
+    let pdfDoc = null, pageNum = 1, scale = 0.95, isHandMode = false, isDragging = false;
+    let lastMouseX = 0, lastMouseY = 0, transformX = 0, transformY = 0;
+    let isRendering = false, pendingPage = null, renderTask = null;
+    let isFirstRender = true; // Controla la primera carga
+    const pageCache = new Map(); // key: `${num}@${scale}` => { bitmap|canvas, width, height }
+
+    const canvas = document.getElementById("pdf-canvas"), ctx = canvas.getContext("2d");
+    const prevButton = document.getElementById("prev-button"), nextButton = document.getElementById("next-button");
+    const progressBar = document.getElementById("progress-bar"), timerText = document.getElementById("timer-text");
+    const trophyIcon = document.getElementById("trophy-icon"), resetZoomBtn = document.getElementById("reset-zoom-btn");
+    const zoomInBtn = document.getElementById("zoom-in-btn"), zoomOutBtn = document.getElementById("zoom-out-btn");
+    const handBtn = document.getElementById("hand-btn"), glassOverlay = document.getElementById("glass-overlay");
+    const trophyExplosionContainer = document.getElementById("trophy-explosion-container");
+    const victorySound = document.getElementById("victory-sound");
+
+    // pdf.js worker
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const rIC = window.requestIdleCallback || function (cb, opts){ return setTimeout(cb, (opts && opts.timeout) || 1); };
+
+    // ====== Carga del documento con streaming ======
+    pdfjsLib.getDocument({
+      url: pdfUrl,
+      rangeChunkSize: 1 << 16, // 64KB
+      disableStream: false,
+      disableAutoFetch: false
+    }).promise.then(pdf => {
+      pdfDoc = pdf;
+      renderPage(pageNum);
+      setInterval(updateTimer, 1000);
+    }).catch(error => {
+      document.getElementById("error-message").textContent = "Error al cargar el PDF: " + error.message;
+    });
+
+    // ====== Render ======
+    async function renderPage(num) {
+      // Cancelar render en curso si aplica
+      if (renderTask && renderTask.cancel) {
+        try { renderTask.cancel(); } catch(_){}
+      }
+      isRendering = true;
+      pendingPage = null;
+      glassOverlay.classList.add("active");
+
+      try {
+        const cacheKey = `${num}@${scale.toFixed(2)}`;
+        const cached = pageCache.get(cacheKey);
+        if (cached) {
+          // Dibujo inmediato desde caché
+          canvas.width = cached.width; canvas.height = cached.height;
+          if (cached.bitmap) {
+            // ImageBitmap (Offscreen)
+            const bmp = cached.bitmap; // podría ser inválido tras GC, pero normalmente es estable
+            const off = document.createElement('canvas');
+            off.width = cached.width; off.height = cached.height;
+            const offCtx = off.getContext('2d');
+            offCtx.drawImage(bmp, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(off, 0, 0);
+          } else if (cached.canvas) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(cached.canvas, 0, 0);
+          }
+        } else {
+          const page = await pdfDoc.getPage(num);
+
+          // Ajuste de DPI/retina sin sobrecargar
+          const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+          const viewport = page.getViewport({ scale: scale * dpr });
+
+          canvas.width = viewport.width; canvas.height = viewport.height;
+          canvas.style.width = `${viewport.width / dpr}px`;
+          canvas.style.height = `${viewport.height / dpr}px`;
+
+          const renderContext = { canvasContext: ctx, viewport };
+          renderTask = page.render(renderContext);
+          await renderTask.promise;
+        }
+
+        if (isFirstRender) {
+          canvas.style.visibility = 'visible';
+          isFirstRender = false;
+        }
+
+        canvas.style.transform = `translate(${transformX}px, ${transformY}px)`;
+
+      } catch (error) {
+        if (error && error.name === 'RenderingCancelledException') {
+          // ignorar
+        } else {
+          console.error("Falló al renderizar la página:", error);
+        }
+      } finally {
+        glassOverlay.classList.remove("active");
+        isRendering = false;
+        pageNum = num;
+        updateButtons();
+        updateProgressBar();
+
+        // Precarga siguiente en idle
+        if (pageNum < (pdfDoc && pdfDoc.numPages || 0)) {
+          rIC(() => preRender(pageNum + 1), { timeout: 250 });
+        }
+      }
+    }
+
+    // Pre-render de la siguiente página a OffscreenCanvas o canvas en memoria
+    async function preRender(num) {
+      const key = `${num}@${scale.toFixed(2)}`;
+      if (pageCache.has(key)) return; // ya en caché
+      try {
+        const page = await pdfDoc.getPage(num);
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        const viewport = page.getViewport({ scale: scale * dpr });
+
+        let entry = { width: viewport.width, height: viewport.height };
+
+        if (typeof OffscreenCanvas !== 'undefined') {
+          const off = new OffscreenCanvas(viewport.width, viewport.height);
+          const offCtx = off.getContext('2d');
+          await page.render({ canvasContext: offCtx, viewport }).promise;
+          if (off.transferToImageBitmap) {
+            entry.bitmap = off.transferToImageBitmap();
+          } else {
+            // Fallback dentro de Offscreen
+            entry.canvas = off; // algunos navegadores dibujan directamente el OffscreenCanvas
+          }
+        } else {
+          // Fallback DOM canvas oculto
+          const c = document.createElement('canvas');
+          c.width = viewport.width; c.height = viewport.height;
+          const cctx = c.getContext('2d');
+          await page.render({ canvasContext: cctx, viewport }).promise;
+          entry.canvas = c;
+        }
+
+        // Limitar tamaño de la caché (LRU simple a 2 entradas)
+        if (pageCache.size >= 2) {
+          const firstKey = pageCache.keys().next().value;
+          pageCache.delete(firstKey);
+        }
+        pageCache.set(key, entry);
+      } catch(e) {
+        // silencioso si falla la precarga
+      }
+    }
+
+    function queueRender(num) {
+      if (isRendering) {
+        pendingPage = num;
+      } else {
+        renderPage(num);
+      }
+    }
+
+    function clearPan() { transformX = 0; transformY = 0; canvas.style.transform = `translate(0px, 0px)`; }
+
+    function zoomIn() { triggerRender(() => { scale = Math.min(scale + 0.2, 3.0); pageCache.clear(); renderPage(pageNum); }); }
+    function zoomOut() { triggerRender(() => { scale = Math.max(scale - 0.2, 0.4); pageCache.clear(); renderPage(pageNum); }); }
+    function resetZoom() { triggerRender(() => { scale = 0.95; clearPan(); pageCache.clear(); renderPage(pageNum); }); }
+
+    function prevPage() { if (pageNum <= 1 || isRendering) return; renderPage(pageNum - 1); }
+    function nextPage() { if (!pdfDoc || pageNum >= pdfDoc.numPages || isRendering) return; renderPage(pageNum + 1); }
+
+    function triggerRender(action) {
+      if (isRendering) return;
+      glassOverlay.classList.add("active");
+      requestAnimationFrame(action);
+    }
+
+    function toggleHand() {
+      isHandMode = !isHandMode;
+      canvas.style.cursor = isHandMode ? 'grab' : 'default';
+      handBtn.classList.toggle('active', isHandMode);
+    }
+
+    // Panning
+    canvas.addEventListener('mousedown', (e) => { if (!isHandMode) return; isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; canvas.style.cursor = 'grabbing'; });
+    canvas.addEventListener('mousemove', (e) => { if (!isDragging) return; const dx = e.clientX - lastMouseX, dy = e.clientY - lastMouseY; transformX += dx; transformY += dy; canvas.style.transform = `translate(${transformX}px, ${transformY}px)`; lastMouseX = e.clientX; lastMouseY = e.clientY; }, { passive: true });
+    const stopDragging = () => { isDragging = false; if (isHandMode) canvas.style.cursor = 'grab'; };
+    canvas.addEventListener('mouseup', stopDragging);
+    canvas.addEventListener('mouseleave', stopDragging);
+
+    function updateButtons() {
+      if (!pdfDoc) return;
+      prevButton.disabled = (pageNum <= 1);
+      nextButton.disabled = (pageNum >= pdfDoc.numPages);
+
+      if (pageNum === pdfDoc.numPages) {
+        document.getElementById('trophy-icon').style.display = 'flex';
+        if (trophyExplosionContainer.children.length === 0) {
+          rIC(() => triggerTrophyExplosion(), { timeout: 200 });
+        }
+      } else {
+        document.getElementById('trophy-icon').style.display = 'none';
+      }
+    }
+
+    function updateProgressBar() { if (!pdfDoc) return; const progress = (pageNum / pdfDoc.numPages) * 100; progressBar.style.width = `${progress}%`; }
+
+    let startTime = Date.now();
+    function updateTimer() {
+      const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = String(Math.floor(elapsedTime / 60)).padStart(2, '0');
+      const seconds = String(elapsedTime % 60).padStart(2, '0');
+      timerText.textContent = `${minutes}:${seconds}`;
+    }
+
+    // ==== Trofeos (optimizado y respetando funcionalidad) ====
+    function createBurst(numTrophies = 10, spreadRadius = 160) {
+      // Ajuste dinámico si el usuario prefiere reducir movimiento
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const N = reduce ? Math.max(4, Math.floor(numTrophies / 2)) : numTrophies;
+      for (let i = 0; i < N; i++) {
+        const trophy = document.createElement('div');
+        trophy.textContent = '🏆';
+        trophy.classList.add('explosion-trophy');
+        const angle = Math.random() * 2 * Math.PI;
+        const dx = Math.cos(angle) * (Math.random() * spreadRadius + 50);
+        const dy = Math.sin(angle) * (Math.random() * spreadRadius + 50);
+        trophy.style.setProperty('--dx', `${dx}px`);
+        trophy.style.setProperty('--dy', `${dy}px`);
+        trophy.style.animationDelay = `${Math.random() * 0.35}s`;
+        trophyExplosionContainer.appendChild(trophy);
+      }
+    }
+
+    async function triggerTrophyExplosion() {
+      try { victorySound.currentTime = 0; await victorySound.play(); } catch(_) { /* posiblemente bloqueado por el navegador */ }
+      trophyExplosionContainer.innerHTML = '';
+      const bursts = 3, delay = 220;
+      for (let i = 0; i < bursts; i++) { createBurst(10, 180); await sleep(delay); }
+      setTimeout(() => { trophyExplosionContainer.innerHTML = ''; }, bursts * delay + 3200);
+    }
+
+    // ====== Listeners ======
+    prevButton.addEventListener("click", prevPage);
+    nextButton.addEventListener("click", nextPage);
+    zoomInBtn.addEventListener("click", zoomIn);
+    zoomOutBtn.addEventListener("click", zoomOut);
+    handBtn.addEventListener("click", toggleHand);
+    resetZoomBtn.addEventListener("click", resetZoom);
+
+    // ====== Seguridad ante render pendiente ======
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && renderTask && renderTask.cancel) {
+        try { renderTask.cancel(); } catch(_){}
+      } else if (!document.hidden && pendingPage) {
+        queueRender(pendingPage);
+      }
+    });
+  });
+  </script>
+</body>
+</html>
