@@ -264,6 +264,10 @@
       let isRendering = false, renderQueue = null;
       let pageCache = {};
       const PRELOAD_AHEAD = 4, CACHE_CLEANUP_DISTANCE = 8, MAX_CACHE_SIZE = 12;
+      
+      // ESTRATEGIA DE RENDIMIENTO: Primera página en tamaño normal (1.0x) pero renderizada
+      // internamente en baja resolución (0.5x) para velocidad extrema, luego se actualiza
+      // a alta resolución en background usando requestIdleCallback
 
              // --- ELEMENTOS DEL DOM ---
        const canvasContainer = document.getElementById("canvas-container");
@@ -278,6 +282,19 @@
        const glassOverlay = document.getElementById("glass-overlay");
        let startTime = Date.now();
       
+      // Fallback para requestIdleCallback en navegadores antiguos
+      if (!window.requestIdleCallback) {
+        window.requestIdleCallback = function(callback, options) {
+          const start = Date.now();
+          return setTimeout(() => {
+            callback({
+              didTimeout: false,
+              timeRemaining: () => Math.max(0, 50 - (Date.now() - start))
+            });
+          }, options?.timeout || 1);
+        };
+      }
+      
       pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
              // --- INICIO ---
@@ -291,14 +308,19 @@
          // para que desaparezca tan pronto como se muestre la primera página
          
          // Renderizar la primera página inmediatamente
+         // ESTRATEGIA: Tamaño normal (100%) pero renderizado en baja resolución interna para velocidad
+         const startRenderTime = performance.now();
          firstPagePromise.then(page => {
            renderPageImmediately(page, 1);
+           const renderTime = performance.now() - startRenderTime;
+           console.log(`⚡ Primera página renderizada en: ${renderTime.toFixed(0)}ms (tamaño normal, resolución optimizada)`);
          });
          
          // Iniciar precarga en segundo plano después de mostrar la primera página
-         setTimeout(() => {
+         // Usar requestIdleCallback para no interferir con la primera página
+         requestIdleCallback(() => {
            startPreloading();
-         }, 100);
+         }, { timeout: 1000 });
          
          setInterval(() => { const elapsed = Math.floor((Date.now() - startTime) / 1000); timerText.textContent = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`; }, 1000);
        }).catch(error => { 
@@ -314,57 +336,53 @@
          }, 400);
        });
 
-      // --- FUNCIÓN DE RENDERIZADO INMEDIATO PARA PRIMERA PÁGINA (BAJA RESOLUCIÓN) ---
+      // --- FUNCIÓN DE RENDERIZADO ULTRA-RÁPIDO PARA PRIMERA PÁGINA ---
       async function renderPageImmediately(page, num) {
         pageNum = num;
         
-        // PRIMERA FASE: Renderizar en baja resolución para carga ultra-rápida
-        const lowResViewport = page.getViewport({ scale: 0.5 });
+        // RENDERIZADO ULTRA-RÁPIDO: Mantener tamaño normal pero con menor resolución interna
+        const normalViewport = page.getViewport({ scale: 1.0 }); // Tamaño normal
+        const fastRenderScale = 0.5; // Escala interna para renderizado rápido
         
-        // Asegurar que las dimensiones sean válidas
-        const validWidth = Math.max(lowResViewport.width, 100);
-        const validHeight = Math.max(lowResViewport.height, 100);
+        // Configurar canvas con tamaño normal pero resolución interna menor
+        canvasContainer.style.width = `${normalViewport.width}px`;
+        canvasContainer.style.height = `${normalViewport.height}px`;
+        canvas.width = normalViewport.width;
+        canvas.height = normalViewport.height;
         
-        canvasContainer.style.width = `${validWidth}px`;
-        canvasContainer.style.height = `${validHeight}px`;
-        canvas.width = validWidth;
-        canvas.height = validHeight;
-
-        // Renderizar en baja resolución para mostrar la página inmediatamente
-        await page.render({ canvasContext: ctx, viewport: lowResViewport }).promise;
+        // Crear un canvas temporal de baja resolución para renderizado rápido
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        const fastViewport = page.getViewport({ scale: fastRenderScale });
+        tempCanvas.width = fastViewport.width;
+        tempCanvas.height = fastViewport.height;
         
-        // Verificar que el canvas se haya renderizado correctamente
-        if (canvas.width > 0 && canvas.height > 0) {
-          // Ocultar inmediatamente el indicador de carga y mostrar la primera página
-          const loadingMessage = document.getElementById('loading-message');
-          loadingMessage.style.opacity = '0';
-          loadingMessage.style.transform = 'translate(-50%, -50%) scale(0.8)';
-          
-          setTimeout(() => {
-            loadingMessage.style.display = 'none';
-            canvasContainer.style.display = 'block';
-            canvasContainer.style.opacity = '0';
-            canvasContainer.style.transform = 'scale(0.9)';
-            canvasContainer.style.transition = 'all 0.5s ease-out';
-            
-            setTimeout(() => {
-              canvasContainer.style.opacity = '1';
-              canvasContainer.style.transform = 'scale(1)';
-            }, 50);
-          }, 100);
-          
-          // No mostrar loader para la primera página
-          glassOverlay.classList.remove('active');
-          
-          // SEGUNDA FASE: Actualizar a alta resolución en segundo plano
-          setTimeout(() => {
-            updateFirstPageToHighResolution(page);
-          }, 200);
-        } else {
-          console.error('Error: Canvas no se renderizó correctamente');
-        }
+        // Renderizar en baja resolución interna para velocidad extrema
+        await page.render({ canvasContext: tempCtx, viewport: fastViewport }).promise;
         
+        // Escalar la imagen de baja resolución al tamaño normal del canvas
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(tempCanvas, 0, 0, normalViewport.width, normalViewport.height);
+        
+        // MOSTRAR PRIMERA PÁGINA INMEDIATAMENTE (sin delays)
+        const loadingMessage = document.getElementById('loading-message');
+        loadingMessage.style.display = 'none'; // Ocultar inmediatamente
+        
+        canvasContainer.style.display = 'block';
+        canvasContainer.style.opacity = '1';
+        canvasContainer.style.transform = 'scale(1)';
+        
+        // No mostrar loader para la primera página
+        glassOverlay.classList.remove('active');
+        
+        // Actualizar UI inmediatamente
         updateUI();
+        
+        // ACTUALIZAR A ALTA RESOLUCIÓN EN BACKGROUND (después de mostrar la página)
+        requestIdleCallback(() => {
+          updateFirstPageToHighResolution(page);
+        });
       }
 
       // --- FUNCIÓN PARA ACTUALIZAR PRIMERA PÁGINA A ALTA RESOLUCIÓN ---
@@ -373,14 +391,11 @@
           // Renderizar en alta resolución (escala normal)
           const highResViewport = page.getViewport({ scale: 1.0 });
           
-          // Asegurar que las dimensiones sean válidas
-          const validWidth = Math.max(highResViewport.width, 100);
-          const validHeight = Math.max(highResViewport.height, 100);
-          
-          canvasContainer.style.width = `${validWidth}px`;
-          canvasContainer.style.height = `${validHeight}px`;
-          canvas.width = validWidth;
-          canvas.height = validHeight;
+          // Actualizar canvas a alta resolución
+          canvasContainer.style.width = `${highResViewport.width}px`;
+          canvasContainer.style.height = `${highResViewport.height}px`;
+          canvas.width = highResViewport.width;
+          canvas.height = highResViewport.height;
 
           // Renderizar en alta resolución
           await page.render({ canvasContext: ctx, viewport: highResViewport }).promise;
@@ -497,7 +512,7 @@
           try {
             const page = await pdfDoc.getPage(pageToPreload);
             
-            // PRIMERA FASE: Precargar en baja resolución para velocidad
+            // PRIMERA FASE: Precargar en baja resolución para velocidad máxima
             const lowResViewport = page.getViewport({ scale: 0.5 });
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
