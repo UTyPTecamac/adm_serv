@@ -265,9 +265,9 @@
       let pageCache = {};
       const PRELOAD_AHEAD = 4, CACHE_CLEANUP_DISTANCE = 8, MAX_CACHE_SIZE = 12;
       
-      // ESTRATEGIA DE RENDIMIENTO: Primera página en tamaño normal (1.0x) pero renderizada
-      // internamente en baja resolución (0.5x) para velocidad extrema, luego se actualiza
-      // a alta resolución en background usando requestIdleCallback
+      // ESTRATEGIA DE RENDIMIENTO PROGRESIVO: Primera página se muestra inmediatamente muy borrosa
+      // (escala 0.1x) y mejora gradualmente hasta alta resolución (1.0x) en tiempo real.
+      // Aprovecha PDFs optimizados con gswin64c y qpdf para máxima velocidad.
 
              // --- ELEMENTOS DEL DOM ---
        const canvasContainer = document.getElementById("canvas-container");
@@ -336,38 +336,23 @@
          }, 400);
        });
 
-      // --- FUNCIÓN DE RENDERIZADO ULTRA-RÁPIDO PARA PRIMERA PÁGINA ---
+      // --- FUNCIÓN DE RENDERIZADO PROGRESIVO ULTRA-RÁPIDO PARA PRIMERA PÁGINA ---
       async function renderPageImmediately(page, num) {
         pageNum = num;
         
-        // RENDERIZADO ULTRA-RÁPIDO: Mantener tamaño normal pero con menor resolución interna
-        const normalViewport = page.getViewport({ scale: 1.0 }); // Tamaño normal
-        const fastRenderScale = 0.5; // Escala interna para renderizado rápido
+        // CONFIGURACIÓN PROGRESIVA: Múltiples escalas para mejora gradual
+        const normalViewport = page.getViewport({ scale: 1.0 }); // Tamaño final
+        const progressiveScales = [0.1, 0.25, 0.5, 0.75, 1.0]; // Escalas progresivas
         
-        // Configurar canvas con tamaño normal pero resolución interna menor
+        // Configurar canvas con tamaño normal
         canvasContainer.style.width = `${normalViewport.width}px`;
         canvasContainer.style.height = `${normalViewport.height}px`;
         canvas.width = normalViewport.width;
         canvas.height = normalViewport.height;
         
-        // Crear un canvas temporal de baja resolución para renderizado rápido
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-        const fastViewport = page.getViewport({ scale: fastRenderScale });
-        tempCanvas.width = fastViewport.width;
-        tempCanvas.height = fastViewport.height;
-        
-        // Renderizar en baja resolución interna para velocidad extrema
-        await page.render({ canvasContext: tempCtx, viewport: fastViewport }).promise;
-        
-        // Escalar la imagen de baja resolución al tamaño normal del canvas
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(tempCanvas, 0, 0, normalViewport.width, normalViewport.height);
-        
-        // MOSTRAR PRIMERA PÁGINA INMEDIATAMENTE (sin delays)
+        // MOSTRAR PRIMERA PÁGINA INMEDIATAMENTE (muy borrosa)
         const loadingMessage = document.getElementById('loading-message');
-        loadingMessage.style.display = 'none'; // Ocultar inmediatamente
+        loadingMessage.style.display = 'none';
         
         canvasContainer.style.display = 'block';
         canvasContainer.style.opacity = '1';
@@ -379,10 +364,70 @@
         // Actualizar UI inmediatamente
         updateUI();
         
-        // ACTUALIZAR A ALTA RESOLUCIÓN EN BACKGROUND (después de mostrar la página)
-        requestIdleCallback(() => {
-          updateFirstPageToHighResolution(page);
-        });
+        // INICIAR RENDERIZADO PROGRESIVO EN PARALELO
+        startProgressiveRendering(page, progressiveScales, normalViewport);
+      }
+
+      // --- FUNCIÓN DE RENDERIZADO PROGRESIVO ---
+      async function startProgressiveRendering(page, scales, finalViewport) {
+        console.log('🚀 Iniciando renderizado progresivo...');
+        
+        // Mostrar indicador de progreso visual
+        const progressIndicator = document.createElement('div');
+        progressIndicator.style.cssText = `
+          position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); 
+          color: white; padding: 10px; border-radius: 5px; z-index: 1000;
+          font-family: monospace; font-size: 14px;
+        `;
+        document.body.appendChild(progressIndicator);
+        
+        for (let i = 0; i < scales.length; i++) {
+          const currentScale = scales[i];
+          const currentViewport = page.getViewport({ scale: currentScale });
+          
+          try {
+            // Crear canvas temporal para la escala actual
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = currentViewport.width;
+            tempCanvas.height = currentViewport.height;
+            
+            // Renderizar en la escala actual
+            await page.render({ canvasContext: tempCtx, viewport: currentViewport }).promise;
+            
+            // Escalar al tamaño final del canvas principal
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(tempCanvas, 0, 0, finalViewport.width, finalViewport.height);
+            
+            // Actualizar indicador de progreso visual
+            const progress = ((i + 1) / scales.length * 100).toFixed(0);
+            const quality = currentScale === 1.0 ? 'Alta' : currentScale >= 0.5 ? 'Media' : 'Baja';
+            progressIndicator.textContent = `📈 ${progress}% - Calidad: ${quality}`;
+            
+            console.log(`📈 Progreso: ${progress}% - Escala: ${currentScale}x - Calidad: ${quality}`);
+            
+            // Pausa más larga para escalas bajas, más corta para altas
+            const delay = currentScale < 0.5 ? 100 : 50;
+            if (i < scales.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            
+          } catch (error) {
+            console.error(`Error en escala ${currentScale}:`, error);
+            break;
+          }
+        }
+        
+        // Ocultar indicador de progreso
+        setTimeout(() => {
+          progressIndicator.style.opacity = '0';
+          progressIndicator.style.transition = 'opacity 0.5s';
+          setTimeout(() => document.body.removeChild(progressIndicator), 500);
+        }, 1000);
+        
+        console.log('✅ Renderizado progresivo completado');
+        scale = 1.0; // Actualizar escala global
       }
 
       // --- FUNCIÓN PARA ACTUALIZAR PRIMERA PÁGINA A ALTA RESOLUCIÓN ---
@@ -499,9 +544,9 @@
         }
       }
 
-      // --- FUNCIÓN DE PRECARGA SILENCIOSA EN SEGUNDO PLANO (BAJA RESOLUCIÓN INICIAL) ---
+      // --- FUNCIÓN DE PRECARGA PROGRESIVA INTELIGENTE ---
       async function startPreloading() {
-        // Precarga completamente silenciosa en segundo plano
+        // Precarga progresiva inteligente en segundo plano
         const preloadPages = [pageNum + 1, pageNum + 2, pageNum + 3, pageNum + 4];
         
         // Usar Promise.allSettled para precargar todas las páginas en paralelo
@@ -512,50 +557,45 @@
           try {
             const page = await pdfDoc.getPage(pageToPreload);
             
-            // PRIMERA FASE: Precargar en baja resolución para velocidad máxima
-            const lowResViewport = page.getViewport({ scale: 0.5 });
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = lowResViewport.width; 
-            tempCanvas.height = lowResViewport.height;
+            // PRECARGA PROGRESIVA: Múltiples escalas para mejor experiencia
+            const progressiveScales = [0.25, 0.5, 1.0];
+            let bestQuality = null;
             
-            // Renderizar en baja resolución para precarga rápida
-            await page.render({ canvasContext: tempCtx, viewport: lowResViewport }).promise;
-            
-            // Guardar versión de baja resolución
-            pageCache[pageToPreload] = {
-              imageData: tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height),
-              width: tempCanvas.width, 
-              height: tempCanvas.height,
-              isLowRes: true, // Marcar como baja resolución
-              page: page // Guardar referencia a la página para actualización posterior
-            };
-            
-            // SEGUNDA FASE: Actualizar a alta resolución en segundo plano
-            setTimeout(async () => {
+            for (const scale of progressiveScales) {
               try {
-                const highResViewport = page.getViewport({ scale: 1.0 });
-                const highResCanvas = document.createElement('canvas');
-                const highResCtx = highResCanvas.getContext('2d');
-                highResCanvas.width = highResViewport.width; 
-                highResCanvas.height = highResViewport.height;
+                const viewport = page.getViewport({ scale: scale });
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = viewport.width; 
+                tempCanvas.height = viewport.height;
                 
-                await page.render({ canvasContext: highResCtx, viewport: highResViewport }).promise;
+                // Renderizar en la escala actual
+                await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
                 
-                // Actualizar caché con versión de alta resolución
-                pageCache[pageToPreload] = {
-                  imageData: highResCtx.getImageData(0, 0, highResCanvas.width, highResCanvas.height),
-                  width: highResCanvas.width, 
-                  height: highResCanvas.height,
-                  isLowRes: false, // Marcar como alta resolución
+                // Guardar la mejor calidad disponible
+                bestQuality = {
+                  imageData: tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height),
+                  width: tempCanvas.width, 
+                  height: tempCanvas.height,
+                  scale: scale,
+                  isLowRes: scale < 1.0,
                   page: page
                 };
                 
-                console.debug(`Página ${pageToPreload} actualizada a alta resolución`);
+                // Si ya tenemos alta resolución, no continuar
+                if (scale === 1.0) break;
+                
               } catch (error) {
-                console.debug(`Error al actualizar página ${pageToPreload} a alta resolución:`, error);
+                console.debug(`Error en precarga escala ${scale} para página ${pageToPreload}:`, error);
+                break;
               }
-            }, 500 + (pageToPreload - pageNum) * 100); // Escalonar las actualizaciones
+            }
+            
+            // Guardar la mejor calidad obtenida
+            if (bestQuality) {
+              pageCache[pageToPreload] = bestQuality;
+              console.debug(`Página ${pageToPreload} precargada en escala ${bestQuality.scale}x`);
+            }
             
             // Actualizar UI de manera silenciosa
             requestAnimationFrame(() => {
@@ -563,15 +603,13 @@
             });
             
           } catch (error) { 
-            // Silenciar errores de precarga para no molestar al usuario
-            console.debug(`Precarga silenciosa fallida para página ${pageToPreload}:`, error); 
+            console.debug(`Precarga fallida para página ${pageToPreload}:`, error); 
           }
         });
         
         // Ejecutar todas las precargas en paralelo sin bloquear
         Promise.allSettled(preloadPromises).then(() => {
-          // Precarga completada silenciosamente
-          console.debug('Precarga en segundo plano completada');
+          console.debug('Precarga progresiva completada');
         });
       }
 
