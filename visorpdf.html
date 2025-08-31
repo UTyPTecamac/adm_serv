@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Visor PDF Definitivo: Estable y Profesional</title>
+  <title>Visor PDF Definitivo: Estable y Profesional - Carga Ultra-Rápida con Baja Resolución Inicial</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
   <style>
@@ -314,21 +314,24 @@
          }, 400);
        });
 
-      // --- FUNCIÓN DE RENDERIZADO INMEDIATO PARA PRIMERA PÁGINA ---
+      // --- FUNCIÓN DE RENDERIZADO INMEDIATO PARA PRIMERA PÁGINA (BAJA RESOLUCIÓN) ---
       async function renderPageImmediately(page, num) {
         pageNum = num;
-        const viewport = page.getViewport({ scale: scale });
-
+        
+        // PRIMERA FASE: Renderizar en baja resolución para carga ultra-rápida
+        const lowResViewport = page.getViewport({ scale: 0.5 });
+        
         // Asegurar que las dimensiones sean válidas
-        const validWidth = Math.max(viewport.width, 100);
-        const validHeight = Math.max(viewport.height, 100);
+        const validWidth = Math.max(lowResViewport.width, 100);
+        const validHeight = Math.max(lowResViewport.height, 100);
         
         canvasContainer.style.width = `${validWidth}px`;
         canvasContainer.style.height = `${validHeight}px`;
         canvas.width = validWidth;
         canvas.height = validHeight;
 
-        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        // Renderizar en baja resolución para mostrar la página inmediatamente
+        await page.render({ canvasContext: ctx, viewport: lowResViewport }).promise;
         
         // Verificar que el canvas se haya renderizado correctamente
         if (canvas.width > 0 && canvas.height > 0) {
@@ -352,11 +355,43 @@
           
           // No mostrar loader para la primera página
           glassOverlay.classList.remove('active');
+          
+          // SEGUNDA FASE: Actualizar a alta resolución en segundo plano
+          setTimeout(() => {
+            updateFirstPageToHighResolution(page);
+          }, 200);
         } else {
           console.error('Error: Canvas no se renderizó correctamente');
         }
         
         updateUI();
+      }
+
+      // --- FUNCIÓN PARA ACTUALIZAR PRIMERA PÁGINA A ALTA RESOLUCIÓN ---
+      async function updateFirstPageToHighResolution(page) {
+        try {
+          // Renderizar en alta resolución (escala normal)
+          const highResViewport = page.getViewport({ scale: 1.0 });
+          
+          // Asegurar que las dimensiones sean válidas
+          const validWidth = Math.max(highResViewport.width, 100);
+          const validHeight = Math.max(highResViewport.height, 100);
+          
+          canvasContainer.style.width = `${validWidth}px`;
+          canvasContainer.style.height = `${validHeight}px`;
+          canvas.width = validWidth;
+          canvas.height = validHeight;
+
+          // Renderizar en alta resolución
+          await page.render({ canvasContext: ctx, viewport: highResViewport }).promise;
+          
+          // Actualizar la escala global para mantener consistencia
+          scale = 1.0;
+          
+          console.debug('Primera página actualizada a alta resolución');
+        } catch (error) {
+          console.error('Error al actualizar primera página a alta resolución:', error);
+        }
       }
 
       // --- LÓGICA DE RENDERIZADO Y NAVEGACIÓN OPTIMIZADA ---
@@ -374,19 +409,26 @@
         // Solo mostrar efecto de cristal sutil, sin loader
         glassOverlay.classList.add('active');
         
-        const page = await pdfDoc.getPage(num);
-        const viewport = page.getViewport({ scale: scale });
+        // Verificar si la página está en caché y en alta resolución
+        if (pageCache[num] && !pageCache[num].isLowRes) {
+          // Usar página en caché de alta resolución
+          await renderCachedPage(num);
+        } else {
+          // Renderizar página normalmente
+          const page = await pdfDoc.getPage(num);
+          const viewport = page.getViewport({ scale: scale });
 
-        // Asegurar que las dimensiones sean válidas
-        const validWidth = Math.max(viewport.width, 100);
-        const validHeight = Math.max(viewport.height, 100);
-        
-        canvasContainer.style.width = `${validWidth}px`;
-        canvasContainer.style.height = `${validHeight}px`;
-        canvas.width = validWidth;
-        canvas.height = validHeight;
+          // Asegurar que las dimensiones sean válidas
+          const validWidth = Math.max(viewport.width, 100);
+          const validHeight = Math.max(viewport.height, 100);
+          
+          canvasContainer.style.width = `${validWidth}px`;
+          canvasContainer.style.height = `${validHeight}px`;
+          canvas.width = validWidth;
+          canvas.height = validHeight;
 
-        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+          await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        }
         
         // Verificar que el canvas se haya renderizado correctamente
         if (canvas.width > 0 && canvas.height > 0) {
@@ -414,6 +456,26 @@
         cleanUpCache();
       }
 
+      // --- FUNCIÓN PARA RENDERIZAR PÁGINA EN CACHÉ ---
+      async function renderCachedPage(pageNum) {
+        const cachedPage = pageCache[pageNum];
+        if (!cachedPage) return;
+        
+        // Asegurar que las dimensiones sean válidas
+        const validWidth = Math.max(cachedPage.width, 100);
+        const validHeight = Math.max(cachedPage.height, 100);
+        
+        canvasContainer.style.width = `${validWidth}px`;
+        canvasContainer.style.height = `${validHeight}px`;
+        canvas.width = validWidth;
+        canvas.height = validHeight;
+
+        // Dibujar la imagen en caché
+        ctx.putImageData(cachedPage.imageData, 0, 0);
+        
+        console.debug(`Página ${pageNum} renderizada desde caché (${cachedPage.isLowRes ? 'baja' : 'alta'} resolución)`);
+      }
+
       function cleanUpCache() {
         for (const cachedPageNum in pageCache) {
           if (Math.abs(cachedPageNum - pageNum) > CACHE_CLEANUP_DISTANCE) {
@@ -422,7 +484,7 @@
         }
       }
 
-      // --- FUNCIÓN DE PRECARGA SILENCIOSA EN SEGUNDO PLANO ---
+      // --- FUNCIÓN DE PRECARGA SILENCIOSA EN SEGUNDO PLANO (BAJA RESOLUCIÓN INICIAL) ---
       async function startPreloading() {
         // Precarga completamente silenciosa en segundo plano
         const preloadPages = [pageNum + 1, pageNum + 2, pageNum + 3, pageNum + 4];
@@ -434,20 +496,51 @@
 
           try {
             const page = await pdfDoc.getPage(pageToPreload);
-            const viewport = page.getViewport({ scale: scale });
+            
+            // PRIMERA FASE: Precargar en baja resolución para velocidad
+            const lowResViewport = page.getViewport({ scale: 0.5 });
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = viewport.width; 
-            tempCanvas.height = viewport.height;
+            tempCanvas.width = lowResViewport.width; 
+            tempCanvas.height = lowResViewport.height;
             
-            // Renderizar en background sin bloquear la UI
-            await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
+            // Renderizar en baja resolución para precarga rápida
+            await page.render({ canvasContext: tempCtx, viewport: lowResViewport }).promise;
             
+            // Guardar versión de baja resolución
             pageCache[pageToPreload] = {
               imageData: tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height),
               width: tempCanvas.width, 
-              height: tempCanvas.height
+              height: tempCanvas.height,
+              isLowRes: true, // Marcar como baja resolución
+              page: page // Guardar referencia a la página para actualización posterior
             };
+            
+            // SEGUNDA FASE: Actualizar a alta resolución en segundo plano
+            setTimeout(async () => {
+              try {
+                const highResViewport = page.getViewport({ scale: 1.0 });
+                const highResCanvas = document.createElement('canvas');
+                const highResCtx = highResCanvas.getContext('2d');
+                highResCanvas.width = highResViewport.width; 
+                highResCanvas.height = highResViewport.height;
+                
+                await page.render({ canvasContext: highResCtx, viewport: highResViewport }).promise;
+                
+                // Actualizar caché con versión de alta resolución
+                pageCache[pageToPreload] = {
+                  imageData: highResCtx.getImageData(0, 0, highResCanvas.width, highResCanvas.height),
+                  width: highResCanvas.width, 
+                  height: highResCanvas.height,
+                  isLowRes: false, // Marcar como alta resolución
+                  page: page
+                };
+                
+                console.debug(`Página ${pageToPreload} actualizada a alta resolución`);
+              } catch (error) {
+                console.debug(`Error al actualizar página ${pageToPreload} a alta resolución:`, error);
+              }
+            }, 500 + (pageToPreload - pageNum) * 100); // Escalonar las actualizaciones
             
             // Actualizar UI de manera silenciosa
             requestAnimationFrame(() => {
