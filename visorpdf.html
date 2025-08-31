@@ -265,9 +265,9 @@
       let pageCache = {};
       const PRELOAD_AHEAD = 4, CACHE_CLEANUP_DISTANCE = 8, MAX_CACHE_SIZE = 12;
       
-      // ESTRATEGIA DE RENDIMIENTO PROGRESIVO: Primera página se muestra inmediatamente muy borrosa
-      // (escala 0.1x) y mejora gradualmente hasta alta resolución (1.0x) en tiempo real.
-      // Aprovecha PDFs optimizados con gswin64c y qpdf para máxima velocidad.
+      // ESTRATEGIA DE RENDIMIENTO: Solo primera página con renderizado progresivo para velocidad extrema.
+      // Las demás funciones (zoom, navegación) funcionan como originalmente para mantener compatibilidad.
+      // Aprovecha PDFs optimizados con gswin64c y qpdf para máxima velocidad inicial.
 
              // --- ELEMENTOS DEL DOM ---
        const canvasContainer = document.getElementById("canvas-container");
@@ -469,26 +469,20 @@
         // Solo mostrar efecto de cristal sutil, sin loader
         glassOverlay.classList.add('active');
         
-        // Verificar si la página está en caché y en alta resolución
-        if (pageCache[num] && !pageCache[num].isLowRes) {
-          // Usar página en caché de alta resolución
-          await renderCachedPage(num);
-        } else {
-          // Renderizar página normalmente
-          const page = await pdfDoc.getPage(num);
-          const viewport = page.getViewport({ scale: scale });
+        // Renderizar página normalmente (restaurado para compatibilidad con zoom)
+        const page = await pdfDoc.getPage(num);
+        const viewport = page.getViewport({ scale: scale });
 
-          // Asegurar que las dimensiones sean válidas
-          const validWidth = Math.max(viewport.width, 100);
-          const validHeight = Math.max(viewport.height, 100);
-          
-          canvasContainer.style.width = `${validWidth}px`;
-          canvasContainer.style.height = `${validHeight}px`;
-          canvas.width = validWidth;
-          canvas.height = validHeight;
+        // Asegurar que las dimensiones sean válidas
+        const validWidth = Math.max(viewport.width, 100);
+        const validHeight = Math.max(viewport.height, 100);
+        
+        canvasContainer.style.width = `${validWidth}px`;
+        canvasContainer.style.height = `${validHeight}px`;
+        canvas.width = validWidth;
+        canvas.height = validHeight;
 
-          await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-        }
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
         
         // Verificar que el canvas se haya renderizado correctamente
         if (canvas.width > 0 && canvas.height > 0) {
@@ -516,25 +510,7 @@
         cleanUpCache();
       }
 
-      // --- FUNCIÓN PARA RENDERIZAR PÁGINA EN CACHÉ ---
-      async function renderCachedPage(pageNum) {
-        const cachedPage = pageCache[pageNum];
-        if (!cachedPage) return;
-        
-        // Asegurar que las dimensiones sean válidas
-        const validWidth = Math.max(cachedPage.width, 100);
-        const validHeight = Math.max(cachedPage.height, 100);
-        
-        canvasContainer.style.width = `${validWidth}px`;
-        canvasContainer.style.height = `${validHeight}px`;
-        canvas.width = validWidth;
-        canvas.height = validHeight;
 
-        // Dibujar la imagen en caché
-        ctx.putImageData(cachedPage.imageData, 0, 0);
-        
-        console.debug(`Página ${pageNum} renderizada desde caché (${cachedPage.isLowRes ? 'baja' : 'alta'} resolución)`);
-      }
 
       function cleanUpCache() {
         for (const cachedPageNum in pageCache) {
@@ -544,9 +520,9 @@
         }
       }
 
-      // --- FUNCIÓN DE PRECARGA PROGRESIVA INTELIGENTE ---
+      // --- FUNCIÓN DE PRECARGA SIMPLIFICADA (NO INTERFIERE CON ZOOM) ---
       async function startPreloading() {
-        // Precarga progresiva inteligente en segundo plano
+        // Precarga simple en segundo plano (no interfiere con zoom)
         const preloadPages = [pageNum + 1, pageNum + 2, pageNum + 3, pageNum + 4];
         
         // Usar Promise.allSettled para precargar todas las páginas en paralelo
@@ -557,45 +533,25 @@
           try {
             const page = await pdfDoc.getPage(pageToPreload);
             
-            // PRECARGA PROGRESIVA: Múltiples escalas para mejor experiencia
-            const progressiveScales = [0.25, 0.5, 1.0];
-            let bestQuality = null;
+            // Precarga simple en escala normal (1.0) para compatibilidad con zoom
+            const viewport = page.getViewport({ scale: 1.0 });
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = viewport.width; 
+            tempCanvas.height = viewport.height;
             
-            for (const scale of progressiveScales) {
-              try {
-                const viewport = page.getViewport({ scale: scale });
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCanvas.width = viewport.width; 
-                tempCanvas.height = viewport.height;
-                
-                // Renderizar en la escala actual
-                await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
-                
-                // Guardar la mejor calidad disponible
-                bestQuality = {
-                  imageData: tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height),
-                  width: tempCanvas.width, 
-                  height: tempCanvas.height,
-                  scale: scale,
-                  isLowRes: scale < 1.0,
-                  page: page
-                };
-                
-                // Si ya tenemos alta resolución, no continuar
-                if (scale === 1.0) break;
-                
-              } catch (error) {
-                console.debug(`Error en precarga escala ${scale} para página ${pageToPreload}:`, error);
-                break;
-              }
-            }
+            // Renderizar en escala normal
+            await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
             
-            // Guardar la mejor calidad obtenida
-            if (bestQuality) {
-              pageCache[pageToPreload] = bestQuality;
-              console.debug(`Página ${pageToPreload} precargada en escala ${bestQuality.scale}x`);
-            }
+            // Guardar en caché
+            pageCache[pageToPreload] = {
+              imageData: tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height),
+              width: tempCanvas.width, 
+              height: tempCanvas.height,
+              page: page
+            };
+            
+            console.debug(`Página ${pageToPreload} precargada`);
             
             // Actualizar UI de manera silenciosa
             requestAnimationFrame(() => {
@@ -609,16 +565,16 @@
         
         // Ejecutar todas las precargas en paralelo sin bloquear
         Promise.allSettled(preloadPromises).then(() => {
-          console.debug('Precarga progresiva completada');
+          console.debug('Precarga completada');
         });
       }
 
-      // --- FUNCIÓN DE REDIBUJADO OPTIMIZADA ---
+      // --- FUNCIÓN DE REDIBUJADO PARA ZOOM/PANEO (RESTAURADA) ---
       async function redrawCurrentPage() {
         if (isRendering) return;
         isRendering = true;
         
-        // Solo mostrar efecto de cristal muy sutil para zoom/paneo
+        // Mostrar efecto de cristal sutil para zoom/paneo
         glassOverlay.classList.add('active');
         
         // Forzar re-renderizado sin usar caché para asegurar la nueva escala/paneo
@@ -647,10 +603,24 @@
         updateUI(); // Actualizar UI después del redibujado
       }
 
-      // --- INTERACCIONES DE USUARIO ---
-      function zoomIn() { scale = Math.min(scale + 0.2, 3.0); redrawCurrentPage(); } // Llama a redrawCurrentPage
-      function zoomOut() { scale = Math.max(scale - 0.2, 0.5); redrawCurrentPage(); } // Llama a redrawCurrentPage
-      function resetZoom() { scale = 1.0; transformX = 0; transformY = 0; canvasContainer.style.transform = `translate(0px, 0px)`; redrawCurrentPage(); } // Llama a redrawCurrentPage
+      // --- INTERACCIONES DE USUARIO (RESTAURADAS) ---
+      function zoomIn() { 
+        scale = Math.min(scale + 0.2, 3.0); 
+        redrawCurrentPage(); 
+      }
+      
+      function zoomOut() { 
+        scale = Math.max(scale - 0.2, 0.5); 
+        redrawCurrentPage(); 
+      }
+      
+      function resetZoom() { 
+        scale = 1.0; 
+        transformX = 0; 
+        transformY = 0; 
+        canvasContainer.style.transform = `translate(0px, 0px)`; 
+        redrawCurrentPage(); 
+      }
       
       function prevPage() { handlePageTransition(pageNum - 1); }
       function nextPage() { handlePageTransition(pageNum + 1); }
