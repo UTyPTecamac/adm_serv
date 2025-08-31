@@ -283,27 +283,23 @@
              // --- INICIO ---
        pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
          pdfDoc = pdf;
-         // Transición suave para ocultar mensaje de carga
-         const loadingMessage = document.getElementById('loading-message');
-         loadingMessage.style.opacity = '0';
-         loadingMessage.style.transform = 'translate(-50%, -50%) scale(0.8)';
-         loadingMessage.style.transition = 'all 0.6s ease-in-out';
          
+         // Cargar la primera página inmediatamente sin esperar
+         const firstPagePromise = pdf.getPage(1);
+         
+         // La transición del indicador de carga se maneja en renderPageImmediately
+         // para que desaparezca tan pronto como se muestre la primera página
+         
+         // Renderizar la primera página inmediatamente
+         firstPagePromise.then(page => {
+           renderPageImmediately(page, 1);
+         });
+         
+         // Iniciar precarga en segundo plano después de mostrar la primera página
          setTimeout(() => {
-           loadingMessage.style.display = 'none';
-           canvasContainer.style.display = 'block';
-           canvasContainer.style.opacity = '0';
-           canvasContainer.style.transform = 'scale(0.9)';
-           canvasContainer.style.transition = 'all 0.5s ease-out';
-           
-           setTimeout(() => {
-             canvasContainer.style.opacity = '1';
-             canvasContainer.style.transform = 'scale(1)';
-           }, 50);
-         }, 600);
+           startPreloading();
+         }, 100);
          
-         handlePageTransition(1); // Inicia la carga de la primera página
-         startPreloading();
          setInterval(() => { const elapsed = Math.floor((Date.now() - startTime) / 1000); timerText.textContent = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`; }, 1000);
        }).catch(error => { 
          const loadingMessage = document.getElementById('loading-message');
@@ -318,7 +314,52 @@
          }, 400);
        });
 
-      // --- LÓGICA DE RENDERIZADO Y NAVEGACIÓN ---
+      // --- FUNCIÓN DE RENDERIZADO INMEDIATO PARA PRIMERA PÁGINA ---
+      async function renderPageImmediately(page, num) {
+        pageNum = num;
+        const viewport = page.getViewport({ scale: scale });
+
+        // Asegurar que las dimensiones sean válidas
+        const validWidth = Math.max(viewport.width, 100);
+        const validHeight = Math.max(viewport.height, 100);
+        
+        canvasContainer.style.width = `${validWidth}px`;
+        canvasContainer.style.height = `${validHeight}px`;
+        canvas.width = validWidth;
+        canvas.height = validHeight;
+
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        
+        // Verificar que el canvas se haya renderizado correctamente
+        if (canvas.width > 0 && canvas.height > 0) {
+          // Ocultar inmediatamente el indicador de carga y mostrar la primera página
+          const loadingMessage = document.getElementById('loading-message');
+          loadingMessage.style.opacity = '0';
+          loadingMessage.style.transform = 'translate(-50%, -50%) scale(0.8)';
+          
+          setTimeout(() => {
+            loadingMessage.style.display = 'none';
+            canvasContainer.style.display = 'block';
+            canvasContainer.style.opacity = '0';
+            canvasContainer.style.transform = 'scale(0.9)';
+            canvasContainer.style.transition = 'all 0.5s ease-out';
+            
+            setTimeout(() => {
+              canvasContainer.style.opacity = '1';
+              canvasContainer.style.transform = 'scale(1)';
+            }, 50);
+          }, 100);
+          
+          // No mostrar loader para la primera página
+          glassOverlay.classList.remove('active');
+        } else {
+          console.error('Error: Canvas no se renderizó correctamente');
+        }
+        
+        updateUI();
+      }
+
+      // --- LÓGICA DE RENDERIZADO Y NAVEGACIÓN OPTIMIZADA ---
       async function handlePageTransition(num) {
         if (num < 1 || num > pdfDoc.numPages) return;
         
@@ -330,8 +371,8 @@
         isRendering = true;
         pageNum = num;
 
-        loader.style.display = 'block';
-        glassOverlay.classList.add('active'); // Activar efecto de cristal
+        // Solo mostrar efecto de cristal sutil, sin loader
+        glassOverlay.classList.add('active');
         
         const page = await pdfDoc.getPage(num);
         const viewport = page.getViewport({ scale: scale });
@@ -349,8 +390,8 @@
         
         // Verificar que el canvas se haya renderizado correctamente
         if (canvas.width > 0 && canvas.height > 0) {
-          loader.style.display = 'none';
-          glassOverlay.classList.remove('active'); // Desactivar efecto de cristal
+          // Remover efecto de cristal inmediatamente
+          glassOverlay.classList.remove('active');
         } else {
           console.error('Error: Canvas no se renderizó correctamente');
         }
@@ -364,15 +405,75 @@
         }
 
         updateUI();
-        startPreloading();
+        
+        // Solo precargar si no es la primera página (la primera ya se precargó por separado)
+        if (num > 1) {
+          startPreloading();
+        }
+        
         cleanUpCache();
       }
 
-      // --- REDIBUJADO PARA ZOOM/PANEO ---
+      function cleanUpCache() {
+        for (const cachedPageNum in pageCache) {
+          if (Math.abs(cachedPageNum - pageNum) > CACHE_CLEANUP_DISTANCE) {
+            delete pageCache[cachedPageNum];
+          }
+        }
+      }
+
+      // --- FUNCIÓN DE PRECARGA SILENCIOSA EN SEGUNDO PLANO ---
+      async function startPreloading() {
+        // Precarga completamente silenciosa en segundo plano
+        const preloadPages = [pageNum + 1, pageNum + 2, pageNum + 3, pageNum + 4];
+        
+        // Usar Promise.allSettled para precargar todas las páginas en paralelo
+        const preloadPromises = preloadPages.map(async (pageToPreload) => {
+          if (pageToPreload > pdfDoc.numPages || pageCache[pageToPreload]) return;
+          if (Object.keys(pageCache).length >= MAX_CACHE_SIZE) return;
+
+          try {
+            const page = await pdfDoc.getPage(pageToPreload);
+            const viewport = page.getViewport({ scale: scale });
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = viewport.width; 
+            tempCanvas.height = viewport.height;
+            
+            // Renderizar en background sin bloquear la UI
+            await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
+            
+            pageCache[pageToPreload] = {
+              imageData: tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height),
+              width: tempCanvas.width, 
+              height: tempCanvas.height
+            };
+            
+            // Actualizar UI de manera silenciosa
+            requestAnimationFrame(() => {
+              updateUI();
+            });
+            
+          } catch (error) { 
+            // Silenciar errores de precarga para no molestar al usuario
+            console.debug(`Precarga silenciosa fallida para página ${pageToPreload}:`, error); 
+          }
+        });
+        
+        // Ejecutar todas las precargas en paralelo sin bloquear
+        Promise.allSettled(preloadPromises).then(() => {
+          // Precarga completada silenciosamente
+          console.debug('Precarga en segundo plano completada');
+        });
+      }
+
+      // --- FUNCIÓN DE REDIBUJADO OPTIMIZADA ---
       async function redrawCurrentPage() {
         if (isRendering) return;
         isRendering = true;
-        glassOverlay.classList.add('active'); // Activar efecto de cristal
+        
+        // Solo mostrar efecto de cristal muy sutil para zoom/paneo
+        glassOverlay.classList.add('active');
         
         // Forzar re-renderizado sin usar caché para asegurar la nueva escala/paneo
         const page = await pdfDoc.getPage(pageNum);
@@ -391,45 +492,13 @@
 
         // Verificar que el canvas se haya renderizado correctamente
         if (canvas.width > 0 && canvas.height > 0) {
-          glassOverlay.classList.remove('active'); // Desactivar efecto de cristal
+          glassOverlay.classList.remove('active');
         } else {
           console.error('Error: Canvas no se redibujó correctamente');
         }
         
         isRendering = false;
         updateUI(); // Actualizar UI después del redibujado
-      }
-
-      // --- GESTIÓN DE CACHÉ ---
-      async function startPreloading() {
-        for (let i = 1; i <= PRELOAD_AHEAD; i++) {
-          const pageToPreload = pageNum + i;
-          if (pageToPreload > pdfDoc.numPages || pageCache[pageToPreload]) continue;
-          if (Object.keys(pageCache).length >= MAX_CACHE_SIZE) break;
-
-          try {
-            const page = await pdfDoc.getPage(pageToPreload);
-            const viewport = page.getViewport({ scale: scale }); // Usar la escala actual para la precarga
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = viewport.width; tempCanvas.height = viewport.height;
-            await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
-            
-            pageCache[pageToPreload] = {
-              imageData: tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height),
-              width: tempCanvas.width, height: tempCanvas.height
-            };
-            updateUI(); // Actualizar la barra de progreso de precarga
-          } catch (error) { console.error(`Fallo al precargar página ${pageToPreload}:`, error); break; }
-        }
-      }
-
-      function cleanUpCache() {
-        for (const cachedPageNum in pageCache) {
-          if (Math.abs(cachedPageNum - pageNum) > CACHE_CLEANUP_DISTANCE) {
-            delete pageCache[cachedPageNum];
-          }
-        }
       }
 
       // --- INTERACCIONES DE USUARIO ---
