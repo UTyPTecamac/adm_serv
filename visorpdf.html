@@ -402,8 +402,8 @@
           return;
         }
         
-        // APLICAR EFECTO DE CRISTAL A LA PÁGINA ACTUAL ANTES DE CAMBIAR
-        glassOverlay.classList.add('active');
+        // EL EFECTO DE CRISTAL YA ESTÁ APLICADO DESDE LOS BOTONES
+        // NO APLICARLO NUEVAMENTE AQUÍ
         
         isRendering = true;
         pageNum = num;
@@ -572,8 +572,20 @@
         redrawCurrentPage(); 
       }
       
-      function prevPage() { handlePageTransition(pageNum - 1); }
-      function nextPage() { handlePageTransition(pageNum + 1); }
+      // --- FUNCIONES DE NAVEGACIÓN CON EFECTO DE CRISTAL INMEDIATO ---
+      function prevPage() { 
+        // APLICAR EFECTO DE CRISTAL INMEDIATAMENTE AL PRESIONAR EL BOTÓN
+        glassOverlay.classList.add('active');
+        // Iniciar transición después de que el efecto de cristal tenga tiempo de aplicarse (0.5s)
+        setTimeout(() => handlePageTransition(pageNum - 1), 500);
+      }
+      
+      function nextPage() { 
+        // APLICAR EFECTO DE CRISTAL INMEDIATAMENTE AL PRESIONAR EL BOTÓN
+        glassOverlay.classList.add('active');
+        // Iniciar transición después de que el efecto de cristal tenga tiempo de aplicarse (0.5s)
+        setTimeout(() => handlePageTransition(pageNum + 1), 500);
+      }
 
       function toggleHand() { isHandMode = !isHandMode; canvasContainer.style.cursor = isHandMode ? 'grab' : 'default'; handBtn.classList.toggle('active', isHandMode); } 
       const handleMouseDown = (e) => { if (isHandMode) { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; canvasContainer.style.cursor = 'grabbing'; } };
