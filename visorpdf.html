@@ -353,21 +353,20 @@
         }, 500); // Delay adicional para asegurar que la primera página esté completamente estable
       }
 
-      // --- FUNCIÓN DE RENDERIZADO PROGRESIVO ULTRA-RÁPIDO PARA PRIMERA PÁGINA ---
+      // --- FUNCIÓN DE RENDERIZADO DIRECTO ULTRA-RÁPIDO PARA PRIMERA PÁGINA ---
       async function renderPageImmediately(page, num) {
         pageNum = num;
         
-        // CONFIGURACIÓN PROGRESIVA: Múltiples escalas para mejora gradual
-        const normalViewport = page.getViewport({ scale: 1.0 }); // Tamaño final
-        const progressiveScales = [0.1, 0.25, 0.5, 0.75, 1.0]; // Escalas progresivas
+        // CONFIGURACIÓN DIRECTA: Calidad normal desde el inicio
+        const viewport = page.getViewport({ scale: 1.0 }); // Calidad normal directa
         
         // Configurar canvas con tamaño normal
-        canvasContainer.style.width = `${normalViewport.width}px`;
-        canvasContainer.style.height = `${normalViewport.height}px`;
-        canvas.width = normalViewport.width;
-        canvas.height = normalViewport.height;
+        canvasContainer.style.width = `${viewport.width}px`;
+        canvasContainer.style.height = `${viewport.height}px`;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
         
-        // MOSTRAR PRIMERA PÁGINA INMEDIATAMENTE (muy borrosa)
+        // MOSTRAR PRIMERA PÁGINA INMEDIATAMENTE EN CALIDAD NORMAL
         const loadingMessage = document.getElementById('loading-message');
         loadingMessage.style.display = 'none';
         
@@ -381,95 +380,18 @@
         // Actualizar UI inmediatamente
         updateUI();
         
-        // INICIAR RENDERIZADO PROGRESIVO EN PARALELO
-        startProgressiveRendering(page, progressiveScales, normalViewport);
-      }
-
-      // --- FUNCIÓN DE RENDERIZADO PROGRESIVO ---
-      async function startProgressiveRendering(page, scales, finalViewport) {
-        console.log('🚀 Iniciando renderizado progresivo...');
-        
-        // Mostrar indicador de progreso visual
-        const progressIndicator = document.createElement('div');
-        progressIndicator.style.cssText = `
-          position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.8); 
-          color: white; padding: 10px; border-radius: 5px; z-index: 1000;
-          font-family: monospace; font-size: 14px;
-        `;
-        document.body.appendChild(progressIndicator);
-        
-        for (let i = 0; i < scales.length; i++) {
-          const currentScale = scales[i];
-          const currentViewport = page.getViewport({ scale: currentScale });
-          
-          try {
-            // Crear canvas temporal para la escala actual
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = currentViewport.width;
-            tempCanvas.height = currentViewport.height;
-            
-            // Renderizar en la escala actual
-            await page.render({ canvasContext: tempCtx, viewport: currentViewport }).promise;
-            
-            // Escalar al tamaño final del canvas principal
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(tempCanvas, 0, 0, finalViewport.width, finalViewport.height);
-            
-            // Actualizar indicador de progreso visual
-            const progress = ((i + 1) / scales.length * 100).toFixed(0);
-            const quality = currentScale === 1.0 ? 'Alta' : currentScale >= 0.5 ? 'Media' : 'Baja';
-            progressIndicator.textContent = `📈 ${progress}% - Calidad: ${quality}`;
-            
-            console.log(`📈 Progreso: ${progress}% - Escala: ${currentScale}x - Calidad: ${quality}`);
-            
-            // Pausa más larga para escalas bajas, más corta para altas
-            const delay = currentScale < 0.5 ? 100 : 50;
-            if (i < scales.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
-            
-          } catch (error) {
-            console.error(`Error en escala ${currentScale}:`, error);
-            break;
-          }
-        }
-        
-        // Ocultar indicador de progreso
-        setTimeout(() => {
-          progressIndicator.style.opacity = '0';
-          progressIndicator.style.transition = 'opacity 0.5s';
-          setTimeout(() => document.body.removeChild(progressIndicator), 500);
-        }, 1000);
-        
-        console.log('✅ Renderizado progresivo completado');
-        scale = 1.0; // Actualizar escala global
-      }
-
-      // --- FUNCIÓN PARA ACTUALIZAR PRIMERA PÁGINA A ALTA RESOLUCIÓN ---
-      async function updateFirstPageToHighResolution(page) {
+        // RENDERIZAR DIRECTAMENTE EN CALIDAD NORMAL (SIN ETAPAS PROGRESIVAS)
         try {
-          // Renderizar en alta resolución (escala normal)
-          const highResViewport = page.getViewport({ scale: 1.0 });
-          
-          // Actualizar canvas a alta resolución
-          canvasContainer.style.width = `${highResViewport.width}px`;
-          canvasContainer.style.height = `${highResViewport.height}px`;
-          canvas.width = highResViewport.width;
-          canvas.height = highResViewport.height;
-
-          // Renderizar en alta resolución
-          await page.render({ canvasContext: ctx, viewport: highResViewport }).promise;
-          
-          // Actualizar la escala global para mantener consistencia
-          scale = 1.0;
-          
-          console.debug('Primera página actualizada a alta resolución');
+          console.log('⚡ Renderizando primera página en calidad normal...');
+          await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+          console.log('✅ Primera página renderizada en calidad normal');
+          scale = 1.0; // Actualizar escala global
         } catch (error) {
-          console.error('Error al actualizar primera página a alta resolución:', error);
+          console.error('Error al renderizar primera página:', error);
         }
       }
+
+
 
       // --- LÓGICA DE RENDERIZADO Y NAVEGACIÓN OPTIMIZADA ---
       async function handlePageTransition(num) {
@@ -480,12 +402,12 @@
           return;
         }
         
+        // APLICAR EFECTO DE CRISTAL A LA PÁGINA ACTUAL ANTES DE CAMBIAR
+        glassOverlay.classList.add('active');
+        
         isRendering = true;
         pageNum = num;
 
-        // Solo mostrar efecto de cristal sutil, sin loader
-        glassOverlay.classList.add('active');
-        
         // Renderizar página normalmente (restaurado para compatibilidad con zoom)
         const page = await pdfDoc.getPage(num);
         const viewport = page.getViewport({ scale: scale });
@@ -503,7 +425,7 @@
         
         // Verificar que el canvas se haya renderizado correctamente
         if (canvas.width > 0 && canvas.height > 0) {
-          // Remover efecto de cristal inmediatamente
+          // Remover efecto de cristal después de que la nueva página esté lista
           glassOverlay.classList.remove('active');
         } else {
           console.error('Error: Canvas no se renderizó correctamente');
@@ -601,7 +523,7 @@
         if (isRendering) return;
         isRendering = true;
         
-        // Mostrar efecto de cristal sutil para zoom/paneo
+        // APLICAR EFECTO DE CRISTAL A LA PÁGINA ACTUAL ANTES DE REDIBUJAR
         glassOverlay.classList.add('active');
         
         // Forzar re-renderizado sin usar caché para asegurar la nueva escala/paneo
@@ -621,6 +543,7 @@
 
         // Verificar que el canvas se haya renderizado correctamente
         if (canvas.width > 0 && canvas.height > 0) {
+          // Remover efecto de cristal después de que la página redibujada esté lista
           glassOverlay.classList.remove('active');
         } else {
           console.error('Error: Canvas no se redibujó correctamente');
