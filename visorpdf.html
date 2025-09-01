@@ -222,10 +222,6 @@
          </div>
        </div>
     <div id="right-controls">
-      <button class="control-button" id="fullscreen-btn" title="Pantalla Completa">
-        <svg id="fullscreen-enter-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-        <svg id="fullscreen-exit-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
-      </button>
              <div id="trophy-icon">🏆</div>
        <div id="timer"><span class="icon">⏰</span><span id="timer-text">00:00</span></div>
     </div>
@@ -283,7 +279,6 @@
        const timerText = document.getElementById("timer-text"), trophyIcon = document.getElementById("trophy-icon");
        const resetZoomBtn = document.getElementById("reset-zoom-btn"), zoomInBtn = document.getElementById("zoom-in-btn");
        const zoomOutBtn = document.getElementById("zoom-out-btn"), handBtn = document.getElementById("hand-btn");
-       const fullscreenBtn = document.getElementById("fullscreen-btn");
        const glassOverlay = document.getElementById("glass-overlay");
        let startTime = Date.now();
       
@@ -592,9 +587,7 @@
       const handleMouseMove = (e) => { if (isDragging) { const dx = e.clientX - lastMouseX, dy = e.clientY - lastMouseY; transformX += dx; transformY += dy; canvasContainer.style.transform = `translate(${transformX}px, ${transformY}px)`; lastMouseX = e.clientX; lastMouseY = e.clientY; } };
       const stopDragging = () => { isDragging = false; if (isHandMode) canvasContainer.style.cursor = 'grab'; };
       
-      // --- PANTALLA COMPLETA Y UI ---
-      function toggleFullscreen() { if (!document.fullscreenElement) { document.documentElement.requestFullscreen(); } else { document.exitFullscreen(); } }
-      function updateFullscreenIcons() { const isFullscreen = !!document.fullscreenElement; document.getElementById('fullscreen-enter-icon').style.display = isFullscreen ? 'none' : 'block'; document.getElementById('fullscreen-exit-icon').style.display = isFullscreen ? 'block' : 'none'; }
+
              function updateUI() {
            if (!pdfDoc) return;
            prevButton.disabled = (pageNum <= 1);
@@ -698,8 +691,6 @@
       zoomOutBtn.addEventListener("click", zoomOut);
       resetZoomBtn.addEventListener("click", resetZoom);
       handBtn.addEventListener("click", toggleHand);
-             fullscreenBtn.addEventListener("click", toggleFullscreen);
-       document.addEventListener('fullscreenchange', updateFullscreenIcons);
       canvasContainer.addEventListener('mousedown', handleMouseDown);
       canvasContainer.addEventListener('mousemove', handleMouseMove);
       canvasContainer.addEventListener('mouseup', stopDragging);
