@@ -265,6 +265,11 @@
       let pageCache = {};
       const PRELOAD_AHEAD = 4, CACHE_CLEANUP_DISTANCE = 8, MAX_CACHE_SIZE = 12;
       
+      // NUEVO: Control de prioridad de carga
+      let isFirstPageLoaded = false;
+      let preloadQueue = [];
+      let isPreloading = false;
+      
       // ESTRATEGIA DE RENDIMIENTO: Solo primera página con renderizado progresivo para velocidad extrema.
       // Las demás funciones (zoom, navegación) funcionan como originalmente para mantener compatibilidad.
       // Aprovecha PDFs optimizados con gswin64c y qpdf para máxima velocidad inicial.
@@ -297,30 +302,29 @@
       
       pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-             // --- INICIO ---
+             // --- INICIO OPTIMIZADO CON PRIORIDAD DE PRIMERA PÁGINA ---
        pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
          pdfDoc = pdf;
          
-         // Cargar la primera página inmediatamente sin esperar
+         console.log('📄 PDF cargado, iniciando carga prioritaria de primera página...');
+         
+         // Cargar SOLO la primera página con máxima prioridad
          const firstPagePromise = pdf.getPage(1);
          
-         // La transición del indicador de carga se maneja en renderPageImmediately
-         // para que desaparezca tan pronto como se muestre la primera página
-         
-         // Renderizar la primera página inmediatamente
-         // ESTRATEGIA: Tamaño normal (100%) pero renderizado en baja resolución interna para velocidad
+         // Renderizar la primera página inmediatamente sin interferencias
          const startRenderTime = performance.now();
          firstPagePromise.then(page => {
            renderPageImmediately(page, 1);
            const renderTime = performance.now() - startRenderTime;
-           console.log(`⚡ Primera página renderizada en: ${renderTime.toFixed(0)}ms (tamaño normal, resolución optimizada)`);
+           console.log(`⚡ Primera página renderizada en: ${renderTime.toFixed(0)}ms (carga prioritaria completada)`);
+           
+           // MARCA: Primera página completamente cargada
+           isFirstPageLoaded = true;
+           
+           // SOLO AHORA iniciar precarga en segundo plano con baja prioridad
+           console.log('🔄 Primera página lista, iniciando precarga de páginas siguientes...');
+           schedulePreloadStart();
          });
-         
-         // Iniciar precarga en segundo plano después de mostrar la primera página
-         // Usar requestIdleCallback para no interferir con la primera página
-         requestIdleCallback(() => {
-           startPreloading();
-         }, { timeout: 1000 });
          
          setInterval(() => { const elapsed = Math.floor((Date.now() - startTime) / 1000); timerText.textContent = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`; }, 1000);
        }).catch(error => { 
@@ -335,6 +339,19 @@
            document.getElementById("error-message").style.display = 'block';
          }, 400);
        });
+
+      // --- NUEVA FUNCIÓN: Programar inicio de precarga con baja prioridad ---
+      function schedulePreloadStart() {
+        // Usar múltiples estrategias para asegurar que no interfiera con la primera página
+        setTimeout(() => {
+          requestIdleCallback(() => {
+            requestIdleCallback(() => {
+              console.log('🚀 Iniciando precarga de páginas siguientes...');
+              startPreloading();
+            }, { timeout: 2000 });
+          }, { timeout: 1000 });
+        }, 500); // Delay adicional para asegurar que la primera página esté completamente estable
+      }
 
       // --- FUNCIÓN DE RENDERIZADO PROGRESIVO ULTRA-RÁPIDO PARA PRIMERA PÁGINA ---
       async function renderPageImmediately(page, num) {
@@ -502,8 +519,8 @@
 
         updateUI();
         
-        // Solo precargar si no es la primera página (la primera ya se precargó por separado)
-        if (num > 1) {
+        // Solo precargar si no es la primera página Y la primera página ya está cargada
+        if (num > 1 && isFirstPageLoaded) {
           startPreloading();
         }
         
@@ -520,8 +537,17 @@
         }
       }
 
-      // --- FUNCIÓN DE PRECARGA SIMPLIFICADA (NO INTERFIERE CON ZOOM) ---
+      // --- FUNCIÓN DE PRECARGA OPTIMIZADA (NO INTERFIERE CON PRIMERA PÁGINA) ---
       async function startPreloading() {
+        // Evitar múltiples precargas simultáneas
+        if (isPreloading) {
+          console.log('⏳ Precarga ya en progreso, saltando...');
+          return;
+        }
+        
+        isPreloading = true;
+        console.log('🔄 Iniciando precarga optimizada...');
+        
         // Precarga simple en segundo plano (no interfiere con zoom)
         const preloadPages = [pageNum + 1, pageNum + 2, pageNum + 3, pageNum + 4];
         
@@ -565,7 +591,8 @@
         
         // Ejecutar todas las precargas en paralelo sin bloquear
         Promise.allSettled(preloadPromises).then(() => {
-          console.debug('Precarga completada');
+          console.log('✅ Precarga completada');
+          isPreloading = false;
         });
       }
 
