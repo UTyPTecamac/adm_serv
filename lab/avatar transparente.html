@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Avatar transparente</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent; /* cuerpo transparente */
+    overflow: hidden;
+  }
+
+  /* Canvas centrado con proporción correcta */
+  canvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: transparent;
+    width: auto;
+    height: 100vh;
+    object-fit: contain;
+  }
+
+  video {
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <video id="video" playsinline loop muted preload="auto">
+    <source src="https://utyptecamac.github.io/adm_serv/lab/avatar-brazos-cruzados-fondo-verde.webm" type="video/webm">
+  </video>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+
+    // color verde a eliminar
+    const target = { r: 0, g: 255, b: 0 };
+    const tolerance = 0.25;
+    const feather = 0.18;
+
+    function startChroma() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      render();
+    }
+
+    function render() {
+      if (video.paused || video.ended) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = frame.data;
+      const maxDist = Math.sqrt(255 * 255 * 3);
+      const threshold = tolerance * maxDist;
+      const smooth = feather * threshold;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        const dr = r - target.r, dg = g - target.g, db = b - target.b;
+        const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+
+        if (dist < threshold - smooth) {
+          data[i + 3] = 0;
+        } else if (dist < threshold + smooth) {
+          const t = (dist - (threshold - smooth)) / (2 * smooth);
+          data[i + 3] = 255 * t;
+        }
+      }
+
+      ctx.putImageData(frame, 0, 0);
+      requestAnimationFrame(render);
+    }
+
+    // Asegurar autoplay
+    async function autoPlay() {
+      try {
+        video.muted = true;
+        await video.play();
+      } catch {
+        // Si el navegador bloquea autoplay, iniciar con clic
+        document.body.addEventListener('click', () => video.play(), { once: true });
+      }
+    }
+
+    video.addEventListener('loadeddata', startChroma);
+    autoPlay();
+  </script>
+</body>
+</html>
