@@ -3,18 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Avatar transparente</title>
+<title>Avatar transparente con velocidad ajustable</title>
 <style>
   html, body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
-    background: transparent; /* cuerpo transparente */
+    background: transparent;
     overflow: hidden;
   }
 
-  /* Canvas centrado con proporción correcta */
   canvas {
     position: absolute;
     top: 50%;
@@ -26,9 +25,7 @@
     object-fit: contain;
   }
 
-  video {
-    display: none;
-  }
+  video { display: none; }
 </style>
 </head>
 <body>
@@ -42,8 +39,10 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d', { alpha: true });
 
-    // color verde a eliminar
-    const target = { r: 0, g: 255, b: 0 };
+    // 💡 Ajusta aquí la velocidad deseada (1 = normal, 0.5 = más lento, 1.5 = más rápido)
+    const VELOCIDAD_VIDEO = 0.8;
+
+    const target = { r: 0, g: 255, b: 0 }; // verde a eliminar
     const tolerance = 0.25;
     const feather = 0.18;
 
@@ -81,14 +80,16 @@
       requestAnimationFrame(render);
     }
 
-    // Asegurar autoplay
     async function autoPlay() {
       try {
         video.muted = true;
+        video.playbackRate = VELOCIDAD_VIDEO;
         await video.play();
       } catch {
-        // Si el navegador bloquea autoplay, iniciar con clic
-        document.body.addEventListener('click', () => video.play(), { once: true });
+        document.body.addEventListener('click', () => {
+          video.playbackRate = VELOCIDAD_VIDEO;
+          video.play();
+        }, { once: true });
       }
     }
 
