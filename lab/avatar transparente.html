@@ -55,10 +55,10 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d", { alpha: true });
 
-    const VELOCIDAD_VIDEO = 1.0; // ajusta la velocidad aquí
+    const VELOCIDAD_VIDEO = .75; // ajusta la velocidad aquí
     const target = { r: 0, g: 255, b: 0 }; // color verde a eliminar
-    const tolerance = 0.25;
-    const feather = 0.18;
+    const tolerance = 0.32;
+    const feather = 0.24;
 
     // Cargar el video dinámicamente
     const source = document.createElement("source");
@@ -129,3 +129,4 @@
   </script>
 </body>
 </html>
+
