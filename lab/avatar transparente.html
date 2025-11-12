@@ -3,73 +3,91 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Avatar transparente dinámico</title>
+<title>Avatar Transparente Total</title>
 <style>
   html, body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
-    background: transparent;
+    background: transparent !important;
     overflow: hidden;
   }
 
-  canvas {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: transparent;
-    width: auto;
-    height: 100vh;
-    object-fit: contain;
+  .avatar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    background: transparent !important;
   }
 
-  video { display: none; }
+  canvas {
+    width: 100%;
+    height: auto;
+    max-height: 100vh;
+    background: transparent !important;
+  }
+
+  video {
+    display: none;
+  }
 </style>
 </head>
 <body>
-  <video id="video" playsinline loop muted preload="auto"></video>
-  <canvas id="canvas"></canvas>
+  <div class="avatar-container">
+    <video id="video" playsinline loop muted preload="auto"></video>
+    <canvas id="canvas"></canvas>
+  </div>
 
   <script>
-    // 🔹 Obtener el parámetro avatar= desde la URL
+    // 🔹 Leer parámetro avatar=
     const params = new URLSearchParams(window.location.search);
     const avatarURL = params.get("avatar") 
-      || "https://utyptecamac.github.io/adm_serv/lab/avatar-brazos-cruzados-fondo-verde.webm"; // valor por defecto
+      || "https://utyptecamac.github.io/adm_serv/lab/avatar-brazos-cruzados-fondo-verde.webm";
 
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d', { alpha: true });
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d", { alpha: true });
 
-    // Configuración general
-    const VELOCIDAD_VIDEO = 0.75;
-    const target = { r: 0, g: 255, b: 0 };
-    const tolerance = 0.32;
-    const feather = 0.30;
+    const VELOCIDAD_VIDEO = 1.0; // ajusta la velocidad aquí
+    const target = { r: 0, g: 255, b: 0 }; // color verde a eliminar
+    const tolerance = 0.25;
+    const feather = 0.18;
 
-    // Cargar fuente del video dinámicamente
-    const source = document.createElement('source');
+    // Cargar el video dinámicamente
+    const source = document.createElement("source");
     source.src = avatarURL;
     source.type = "video/webm";
     video.appendChild(source);
 
-    video.addEventListener('loadeddata', () => {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      video.playbackRate = VELOCIDAD_VIDEO;
-      video.play();
-      render();
-    });
+    // Ajuste de tamaño responsivo
+    function resizeCanvas() {
+      if (!video.videoWidth) return;
+      const ratio = video.videoWidth / video.videoHeight;
+      const width = window.innerWidth;
+      const height = width / ratio;
+      canvas.width = width * window.devicePixelRatio;
+      canvas.height = height * window.devicePixelRatio;
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
 
+    // Efecto chroma key suave
     function render() {
       if (video.paused || video.ended) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
 
       const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = frame.data;
-      const maxDist = Math.sqrt(255 * 255 * 3);
+      const maxDist = Math.sqrt(255 ** 2 * 3);
       const threshold = tolerance * maxDist;
       const smooth = feather * threshold;
 
@@ -78,31 +96,36 @@
         const dr = r - target.r, dg = g - target.g, db = b - target.b;
         const dist = Math.sqrt(dr * dr + dg * dg + db * db);
 
-        if (dist < threshold - smooth) {
-          data[i + 3] = 0;
-        } else if (dist < threshold + smooth) {
-          const t = (dist - (threshold - smooth)) / (2 * smooth);
-          data[i + 3] = 255 * t;
-        }
+        if (dist < threshold - smooth) data[i + 3] = 0;
+        else if (dist < threshold + smooth)
+          data[i + 3] = 255 * ((dist - (threshold - smooth)) / (2 * smooth));
       }
 
       ctx.putImageData(frame, 0, 0);
       requestAnimationFrame(render);
     }
 
-    // Intentar autoplay (requerido en navegadores modernos)
+    // Cuando carga el video
+    video.addEventListener("loadeddata", () => {
+      resizeCanvas();
+      video.playbackRate = VELOCIDAD_VIDEO;
+      video.play();
+      render();
+    });
+
+    // Autoplay en navegadores modernos
     async function autoPlay() {
       try {
         video.muted = true;
         await video.play();
       } catch {
-        document.body.addEventListener('click', () => video.play(), { once: true });
+        document.body.addEventListener("click", () => video.play(), { once: true });
       }
     }
-
     autoPlay();
+
+    // Redimensionamiento en tiempo real
+    window.addEventListener("resize", resizeCanvas);
   </script>
 </body>
 </html>
-
-
