@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Avatar transparente con velocidad ajustable</title>
+<title>Avatar transparente dinámico</title>
 <style>
   html, body {
     margin: 0;
@@ -29,28 +29,38 @@
 </style>
 </head>
 <body>
-  <video id="video" playsinline loop muted preload="auto">
-    <source src="https://utyptecamac.github.io/adm_serv/lab/avatar-brazos-cruzados-fondo-verde.webm" type="video/webm">
-  </video>
+  <video id="video" playsinline loop muted preload="auto"></video>
   <canvas id="canvas"></canvas>
 
   <script>
+    // 🔹 Obtener el parámetro avatar= desde la URL
+    const params = new URLSearchParams(window.location.search);
+    const avatarURL = params.get("avatar") 
+      || "https://utyptecamac.github.io/adm_serv/lab/avatar-brazos-cruzados-fondo-verde.webm"; // valor por defecto
+
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d', { alpha: true });
 
-    // 💡 Ajusta aquí la velocidad deseada (1 = normal, 0.5 = más lento, 1.5 = más rápido)
-    const VELOCIDAD_VIDEO = 0.7;
+    // Configuración general
+    const VELOCIDAD_VIDEO = 0.9;
+    const target = { r: 0, g: 255, b: 0 };
+    const tolerance = 0.28;
+    const feather = 0.24;
 
-    const target = { r: 0, g: 255, b: 0 }; // verde a eliminar
-    const tolerance = 0.24;
-    const feather = 0.27;
+    // Cargar fuente del video dinámicamente
+    const source = document.createElement('source');
+    source.src = avatarURL;
+    source.type = "video/webm";
+    video.appendChild(source);
 
-    function startChroma() {
+    video.addEventListener('loadeddata', () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+      video.playbackRate = VELOCIDAD_VIDEO;
+      video.play();
       render();
-    }
+    });
 
     function render() {
       if (video.paused || video.ended) return;
@@ -80,24 +90,17 @@
       requestAnimationFrame(render);
     }
 
+    // Intentar autoplay (requerido en navegadores modernos)
     async function autoPlay() {
       try {
         video.muted = true;
-        video.playbackRate = VELOCIDAD_VIDEO;
         await video.play();
       } catch {
-        document.body.addEventListener('click', () => {
-          video.playbackRate = VELOCIDAD_VIDEO;
-          video.play();
-        }, { once: true });
+        document.body.addEventListener('click', () => video.play(), { once: true });
       }
     }
 
-    video.addEventListener('loadeddata', startChroma);
     autoPlay();
   </script>
 </body>
 </html>
-
-
-
