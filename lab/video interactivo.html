@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Video interactivo (HTML5 + YouTube IFrame API) — Preguntas cada 30s</title>
+  <style>
+    :root{
+      --overlay-bg: rgba(0,0,0,0.65);
+      --card-bg: #fff;
+      --accent: #0b84ff;
+      --radius: 12px;
+    }
+    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#111; color:#111; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .player-wrap{ width:100%; max-width:960px; aspect-ratio:16/9; position:relative; }
+    /* Responsive container for youtube */
+    #player { position:absolute; inset:0; width:100%; height:100%; }
+
+    /* Modal overlay for questions */
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:var(--overlay-bg);
+      z-index:20;
+      padding:20px;
+    }
+    .card{
+      width:100%;
+      max-width:760px;
+      background:var(--card-bg);
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    .question-title{ font-weight:600; margin:0 0 8px; font-size:1.05rem; }
+    .options{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+    .option-btn{
+      padding:10px 12px;
+      border-radius:8px;
+      border:1px solid #ddd;
+      background:transparent;
+      cursor:pointer;
+      text-align:left;
+      font-size:0.98rem;
+    }
+    .option-btn:hover{ transform:translateY(-1px); }
+    .option-btn.selected{ background:var(--accent); color:#fff; border-color:var(--accent); }
+    .controls-row{ display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+    .btn{ padding:8px 12px; border-radius:8px; border:0; cursor:pointer; }
+    .btn.primary{ background:var(--accent); color:#fff; }
+    .btn.ghost{ background:transparent; border:1px solid #ddd; }
+    .footer-summary{ margin-top:12px; font-size:0.92rem; color:#444; }
+
+    /* Small-screen tweaks */
+    @media (max-width:520px){
+      .card{ padding:12px; border-radius:10px; }
+      .question-title{ font-size:1rem; }
+    }
+
+    /* small scoreboard top-right */
+    .score-badge{
+      position:absolute;
+      top:10px;
+      right:10px;
+      background:rgba(255,255,255,0.9);
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:600;
+      z-index:30;
+      box-shadow:0 6px 18px rgba(0,0,0,0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="player-wrap" id="playerWrap">
+    <div id="player"></div>
+
+    <div class="score-badge" id="scoreBadge">0 / 0</div>
+
+    <div class="overlay" id="overlay">
+      <div class="card" role="dialog" aria-modal="true" aria-label="Pregunta">
+        <div class="question-title" id="qTitle">Pregunta aquí</div>
+        <div id="qHint" style="font-size:.88rem;color:#666"></div>
+        <div class="options" id="options"></div>
+
+        <div class="controls-row">
+          <button class="btn ghost" id="skipBtn" title="Saltar (deshabilitado)">Saltar</button>
+          <button class="btn primary" id="submitBtn" disabled>Responder y continuar</button>
+        </div>
+
+        <div class="footer-summary" id="footerSummary"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*****************************************************
+     * CONFIGURACIÓN
+     *****************************************************/
+    const YT_VIDEO_ID = 'WMeQMa49cWQ'; // tu video
+    const QUESTION_INTERVAL = 30; // segundos entre preguntas
+    const POLL_INTERVAL_MS = 300;  // cada cuánto comprobamos tiempo de reproducción
+    // Si quieres personalizar preguntas para tiempos específicos, añadir aquí:
+    // formato: { time: 30, question: "¿Qué...?", options: ["A","B","C","D"], correct: 1 }
+    // Si dejas vacío, se generarán preguntas de ejemplo.
+    const questionsByTime = [
+      // Ejemplo: { time: 30, question: "¿Qué aprendiste en 0-30s?", options:["Nada","Algo","Bastante","Todo"], correct: 2 },
+      // Puedes añadir manualmente o dejar vacío.
+    ];
+
+    /*****************************************************
+     * LÓGICA (no tocar si no sabes)
+     *****************************************************/
+    let player;
+    let duration = null;
+    let scheduledTimes = []; // array de segundos: [30,60,90,...]
+    let nextIdx = 0;
+    let pollTimer = null;
+    let answersLog = []; // {time, selected, correct}
+    const overlay = document.getElementById('overlay');
+    const qTitle = document.getElementById('qTitle');
+    const qHint = document.getElementById('qHint');
+    const optionsEl = document.getElementById('options');
+    const submitBtn = document.getElementById('submitBtn');
+    const skipBtn = document.getElementById('skipBtn');
+    const scoreBadge = document.getElementById('scoreBadge');
+    const footerSummary = document.getElementById('footerSummary');
+
+    // Carga la API de YouTube
+    function loadYouTubeAPI(callbackName='onYouTubeIframeAPIReady'){
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+      // YouTube API espera que exista la función global onYouTubeIframeAPIReady
+      window.onYouTubeIframeAPIReady = function(){
+        initPlayer();
+      };
+    }
+
+    function initPlayer(){
+      player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: YT_VIDEO_ID,
+        playerVars: {
+          controls: 1,
+          rel: 0,
+          modestbranding: 1,
+          iv_load_policy: 3,
+          disablekb: 0,
+          fs: 1
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
+
+    function onPlayerReady(event){
+      // obtener duración y preparar tiempos
+      duration = player.getDuration();
+      prepareQuestionTimes();
+      updateScoreBadge();
+      startPolling();
+    }
+
+    function prepareQuestionTimes(){
+      scheduledTimes = [];
+      const total = Math.floor(duration);
+      // construir tiempos cada QUESTION_INTERVAL segundos
+      for(let t = QUESTION_INTERVAL; t < total; t += QUESTION_INTERVAL){
+        scheduledTimes.push(t);
+      }
+      // si preguntas definidas por usuario, reemplazar esos tiempos manteniendo orden
+      if (questionsByTime && questionsByTime.length){
+        // fusionar: preferir tiempos definidos por el usuario; si user defined times cover subset, include others
+        const userTimes = questionsByTime.map(q=>q.time).sort((a,b)=>a-b);
+        // union de sets
+        const set = new Set([...scheduledTimes, ...userTimes]);
+        scheduledTimes = Array.from(set).filter(t => t < total).sort((a,b)=>a-b);
+      }
+      // si no hay tiempos, no hagas nada
+      // Reset nextIdx
+      nextIdx = 0;
+    }
+
+    function startPolling(){
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(()=>{
+        if (!player || typeof player.getPlayerState !== 'function') return;
+        const state = player.getPlayerState();
+        if (state === YT.PlayerState.PLAYING){
+          const now = player.getCurrentTime();
+          checkForQuestion(now);
+        }
+      }, POLL_INTERVAL_MS);
+    }
+
+    function checkForQuestion(now){
+      if (nextIdx >= scheduledTimes.length) return;
+      const nextTime = scheduledTimes[nextIdx];
+      // si hemos pasado o igualado el tiempo (considerar tolerancia 0.6s)
+      if (now + 0.6 >= nextTime){
+        // Pausar y mostrar pregunta
+        player.pauseVideo();
+        showQuestionForTime(nextTime);
+      }
+    }
+
+    function showQuestionForTime(timeSec){
+      // obtener pregunta personalizada si existe en questionsByTime
+      const qDef = (questionsByTime || []).find(q=>Math.abs(q.time - timeSec) < 0.5);
+      let qObj;
+      if (qDef){
+        qObj = {
+          time: timeSec,
+          question: qDef.question || `Pregunta en ${timeSec}s`,
+          options: qDef.options || ['A','B','C','D'],
+          correct: qDef.correct ?? null
+        };
+      } else {
+        // Generar placeholder
+        qObj = {
+          time: timeSec,
+          question: `¿Qué punto clave recuerdas alrededor de ${formatTime(timeSec)}?`,
+          options: [
+            'Opción 1 (ejemplo)',
+            'Opción 2 (ejemplo)',
+            'Opción 3 (ejemplo)',
+            'Opción 4 (ejemplo)'
+          ],
+          correct: null
+        };
+      }
+      presentQuestionModal(qObj);
+    }
+
+    // crea DOM del modal y lógica de respuesta
+    function presentQuestionModal(qObj){
+      qTitle.textContent = qObj.question;
+      qHint.textContent = `Segundos: ${qObj.time}`;
+      optionsEl.innerHTML = '';
+      submitBtn.disabled = true;
+      footerSummary.textContent = `Pregunta ${nextIdx+1} de ${scheduledTimes.length}`;
+
+      let selectedIndex = null;
+      qObj.options.forEach((opt, i) => {
+        const b = document.createElement('button');
+        b.className = 'option-btn';
+        b.type = 'button';
+        b.innerText = opt;
+        b.addEventListener('click', () => {
+          // marcar selección
+          selectedIndex = i;
+          Array.from(optionsEl.children).forEach(ch => ch.classList.remove('selected'));
+          b.classList.add('selected');
+          submitBtn.disabled = false;
+        });
+        optionsEl.appendChild(b);
+      });
+
+      // Mostrar overlay y bloquear interacción con el player
+      overlay.style.display = 'flex';
+
+      // Deshabilitar controles nativos mientras modal activo (intento)
+      // Nota: no podemos quitar completamente controles del iframe, pero al poner overlay encima, evitamos clicks.
+
+      // Submit handler
+      function onSubmit(){
+        // registrar respuesta
+        const isCorrect = (qObj.correct !== null) ? (selectedIndex === qObj.correct) : null;
+        answersLog.push({
+          time: qObj.time,
+          selected: selectedIndex,
+          correct: qObj.correct,
+          isCorrect
+        });
+        nextIdx++;
+        updateScoreBadge();
+        // cerrar modal y reanudar
+        overlay.style.display = 'none';
+        // small delay to allow UI to hide before resuming
+        setTimeout(()=> {
+          // avanzar un poco (0.2s) para evitar volver a disparar la misma pausa
+          try{
+            const newTime = Math.min(player.getDuration(), qObj.time + 0.2);
+            player.seekTo(newTime, true);
+          } catch(e){}
+          player.playVideo();
+        }, 120);
+        // cleanup
+        submitBtn.removeEventListener('click', onSubmit);
+        skipBtn.removeEventListener('click', onSkip);
+      }
+
+      // Optionally: allow skipping (disabled by default). You can enable and implement policy.
+      function onSkip(){
+        answersLog.push({
+          time: qObj.time,
+          selected: null,
+          correct: qObj.correct,
+          isCorrect: false,
+          skipped: true
+        });
+        nextIdx++;
+        updateScoreBadge();
+        overlay.style.display = 'none';
+        setTimeout(()=> {
+          try{ player.seekTo(qObj.time + 0.2, true); } catch(e){}
+          player.playVideo();
+        }, 120);
+        submitBtn.removeEventListener('click', onSubmit);
+        skipBtn.removeEventListener('click', onSkip);
+      }
+
+      submitBtn.addEventListener('click', onSubmit);
+      // skipBtn.addEventListener('click', onSkip); // si quieres habilitar skip, descomenta.
+
+      // Focus first option for accessibility
+      const firstOpt = optionsEl.querySelector('button');
+      if (firstOpt) firstOpt.focus();
+    }
+
+    function updateScoreBadge(){
+      const done = answersLog.length;
+      const total = scheduledTimes.length;
+      scoreBadge.textContent = `${done} / ${total}`;
+    }
+
+    function onPlayerStateChange(event){
+      // si el video termina, show summary
+      if (event.data === YT.PlayerState.ENDED){
+        showSummary();
+      }
+    }
+
+    function showSummary(){
+      // construir resumen simple
+      let correctCount = answersLog.filter(a => a.isCorrect === true).length;
+      const total = scheduledTimes.length;
+      const summaryLines = answersLog.map((a, i) => {
+        const t = formatTime(a.time);
+        const sel = (a.selected === null) ? '—' : `Opción ${a.selected+1}`;
+        const corr = (a.correct === null) ? 'N/A' : `Opción ${a.correct+1}`;
+        const ok = (a.isCorrect === null) ? '' : (a.isCorrect ? '✅' : '❌');
+        return `${i+1}) ${t} — seleccionado: ${sel} — correcto: ${corr} ${ok}`;
+      }).join('\n');
+
+      // Reusar el modal para mostrar resumen
+      qTitle.textContent = `Resumen: ${answersLog.length} respuestas registradas`;
+      qHint.textContent = `Aciertos: ${correctCount} / ${total}`;
+      optionsEl.innerHTML = '<pre style="white-space:pre-wrap; font-size:.92rem; color:#222; margin:0;">' + (summaryLines || 'No hubo respuestas registradas.') + '</pre>';
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Cerrar';
+      submitBtn.onclick = () => { overlay.style.display='none'; submitBtn.innerText = 'Responder y continuar'; };
+      skipBtn.style.display = 'none';
+      overlay.style.display = 'flex';
+    }
+
+    function formatTime(s){
+      s = Math.floor(s || 0);
+      const mm = Math.floor(s/60).toString().padStart(2,'0');
+      const ss = (s%60).toString().padStart(2,'0');
+      return `${mm}:${ss}`;
+    }
+
+    // Inicializamos la API
+    loadYouTubeAPI();
+
+    // Evitar que el usuario cierre modal con ESC accidentalmente (si quieres permitirlo, manejar keydown)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay.style.display === 'flex'){
+        // opcional: no permitir
+        e.preventDefault();
+      }
+    });
+
+    // Si quieres exponer una función para añadir preguntas personalizadas vía JS
+    // example: addQuestion(30, '¿Cuál es...', ['A','B','C','D'], 2)
+    function addQuestion(time, question, options, correctIndex = null){
+      if (!Array.isArray(questionsByTime)) window.questionsByTime = [];
+      window.questionsByTime.push({ time, question, options, correct: correctIndex });
+      prepareQuestionTimes();
+      updateScoreBadge();
+    }
+
+    // Exponer a window para depuración (opcional)
+    window._interactiveVideo = {
+      getScheduledTimes: ()=>scheduledTimes,
+      getAnswers: ()=>answersLog,
+      addQuestion
+    };
+  </script>
+</body>
+</html>
