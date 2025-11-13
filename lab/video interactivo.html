@@ -1,399 +1,948 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Video interactivo (HTML5 + YouTube IFrame API) — Preguntas cada 30s</title>
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Interactivo Educativo</title>
+  <script src="/_sdk/element_sdk.js"></script>
   <style>
-    :root{
-      --overlay-bg: rgba(0,0,0,0.65);
-      --card-bg: #fff;
-      --accent: #0b84ff;
-      --radius: 12px;
-    }
-    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#111; color:#111; display:flex; align-items:center; justify-content:center; min-height:100vh; }
-    .player-wrap{ width:100%; max-width:960px; aspect-ratio:16/9; position:relative; }
-    /* Responsive container for youtube */
-    #player { position:absolute; inset:0; width:100%; height:100%; }
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100%;
+            color: #333;
+        }
 
-    /* Modal overlay for questions */
-    .overlay{
-      position:absolute;
-      inset:0;
-      display:none;
-      align-items:center;
-      justify-content:center;
-      background:var(--overlay-bg);
-      z-index:20;
-      padding:20px;
-    }
-    .card{
-      width:100%;
-      max-width:760px;
-      background:var(--card-bg);
-      border-radius:var(--radius);
-      padding:18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    }
-    .question-title{ font-weight:600; margin:0 0 8px; font-size:1.05rem; }
-    .options{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
-    .option-btn{
-      padding:10px 12px;
-      border-radius:8px;
-      border:1px solid #ddd;
-      background:transparent;
-      cursor:pointer;
-      text-align:left;
-      font-size:0.98rem;
-    }
-    .option-btn:hover{ transform:translateY(-1px); }
-    .option-btn.selected{ background:var(--accent); color:#fff; border-color:var(--accent); }
-    .controls-row{ display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
-    .btn{ padding:8px 12px; border-radius:8px; border:0; cursor:pointer; }
-    .btn.primary{ background:var(--accent); color:#fff; }
-    .btn.ghost{ background:transparent; border:1px solid #ddd; }
-    .footer-summary{ margin-top:12px; font-size:0.92rem; color:#444; }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
 
-    /* Small-screen tweaks */
-    @media (max-width:520px){
-      .card{ padding:12px; border-radius:10px; }
-      .question-title{ font-size:1rem; }
-    }
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
 
-    /* small scoreboard top-right */
-    .score-badge{
-      position:absolute;
-      top:10px;
-      right:10px;
-      background:rgba(255,255,255,0.9);
-      padding:6px 10px;
-      border-radius:999px;
-      font-weight:600;
-      z-index:30;
-      box-shadow:0 6px 18px rgba(0,0,0,0.25);
-    }
-  </style>
-</head>
-<body>
-  <div class="player-wrap" id="playerWrap">
-    <div id="player"></div>
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
 
-    <div class="score-badge" id="scoreBadge">0 / 0</div>
+        .header p {
+            margin: 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
 
-    <div class="overlay" id="overlay">
-      <div class="card" role="dialog" aria-modal="true" aria-label="Pregunta">
-        <div class="question-title" id="qTitle">Pregunta aquí</div>
-        <div id="qHint" style="font-size:.88rem;color:#666"></div>
-        <div class="options" id="options"></div>
+        .video-container {
+            position: relative;
+            padding: 30px;
+            background: #f8f9fa;
+        }
 
-        <div class="controls-row">
-          <button class="btn ghost" id="skipBtn" title="Saltar (deshabilitado)">Saltar</button>
-          <button class="btn primary" id="submitBtn" disabled>Responder y continuar</button>
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .video-status {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            z-index: 5;
+            display: none;
+        }
+
+        .video-status.active {
+            display: block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .next-question-timer {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,193,7,0.95);
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            display: none;
+            z-index: 5;
+            animation: bounce 0.5s ease-out;
+        }
+
+        @keyframes bounce {
+            0% { transform: translateX(-50%) translateY(20px); opacity: 0; }
+            100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .play-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255,107,107,0.3);
+            min-width: 200px;
+        }
+
+        .play-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255,107,107,0.4);
+        }
+
+        .play-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .video-info {
+            background: rgba(33,150,243,0.1);
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 0.95em;
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        .quiz-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+
+        .quiz-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 40px;
+            border-radius: 25px;
+            max-width: 550px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+            animation: slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 3px solid rgba(255,255,255,0.2);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .quiz-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            gap: 15px;
+        }
+
+        .question-number {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9em;
+        }
+
+        .quiz-card h3 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 1.4em;
+            line-height: 1.5;
+            font-weight: 600;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .quiz-option {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border: 2px solid #e9ecef;
+            padding: 18px 25px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            font-size: 1em;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .quiz-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .quiz-option:hover::before {
+            left: 100%;
+        }
+
+        .quiz-option:hover {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-color: #2196f3;
+            transform: translateX(8px) translateY(-2px);
+            box-shadow: 0 8px 25px rgba(33,150,243,0.2);
+        }
+
+        .quiz-option.selected {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            color: white;
+            border-color: #1565c0;
+            transform: translateX(8px) translateY(-2px);
+            box-shadow: 0 8px 25px rgba(33,150,243,0.4);
+        }
+
+        .quiz-option.correct {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+            border-color: #2e7d32;
+            animation: correctPulse 0.6s ease-out;
+        }
+
+        .quiz-option.incorrect {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+            border-color: #c62828;
+            animation: shake 0.5s ease-out;
+        }
+
+        @keyframes correctPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .quiz-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #4caf50, #45a049);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 15px rgba(76,175,80,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .submit-btn:hover:not(:disabled)::before {
+            left: 100%;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(76,175,80,0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .continue-btn {
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            display: none;
+            box-shadow: 0 4px 15px rgba(33,150,243,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .continue-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .continue-btn:hover::before {
+            left: 100%;
+        }
+
+        .continue-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(33,150,243,0.4);
+        }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 15px;
+            font-weight: 600;
+            display: none;
+            animation: feedbackSlide 0.5s ease-out;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        @keyframes feedbackSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feedback.correct {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border: 2px solid #28a745;
+        }
+
+        .feedback.incorrect {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border: 2px solid #dc3545;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            height: 8px;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: #2196f3;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .video-container {
+                padding: 20px;
+            }
+            
+            .quiz-card {
+                padding: 25px;
+                width: 95%;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="container">
+   <div class="header">
+    <h1 id="videoTitle">Video Interactivo Educativo</h1>
+    <p id="welcomeMessage">¡Aprende de manera interactiva! Responde las preguntas para continuar.</p>
+   </div>
+   <div class="video-container">
+    <div class="video-wrapper">
+     <div id="videoPlayer"></div>
+     <div class="video-status" id="videoStatus">
+      🔴 En Vivo
+     </div>
+     <div class="next-question-timer" id="nextQuestionTimer">
+      ⏰ Próxima pregunta en: <span id="countdown">30</span>s
+     </div>
+     <div class="quiz-overlay" id="quizOverlay">
+      <div class="quiz-card">
+       <div class="quiz-header">
+        <div class="question-number" id="questionNumber">
+         Pregunta 1 de 5
         </div>
-
-        <div class="footer-summary" id="footerSummary"></div>
+       </div>
+       <h3 id="questionText">Pregunta aparecerá aquí</h3>
+       <div class="quiz-options" id="quizOptions"></div>
+       <div class="quiz-actions"><button class="submit-btn" id="submitBtn" onclick="checkAnswer()"> ✓ Responder </button> <button class="continue-btn" id="continueBtn" onclick="continueVideo()"> ▶ Continuar Video </button>
+       </div>
+       <div class="feedback" id="feedback"></div>
       </div>
+     </div>
     </div>
+    <div class="controls"><button class="play-btn" id="playBtn" onclick="startVideo()">▶ Comenzar Video Interactivo</button>
+     <div class="video-info" id="videoInfo">
+      📚 Preguntas cada 30 segundos
+     </div>
+    </div>
+    <div class="progress-bar">
+     <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="stats">
+     <div class="stat-item">
+      <div class="stat-number" id="correctCount">
+       0
+      </div>
+      <div class="stat-label">
+       Correctas
+      </div>
+     </div>
+     <div class="stat-item">
+      <div class="stat-number" id="totalQuestions">
+       0
+      </div>
+      <div class="stat-label">
+       Preguntas
+      </div>
+     </div>
+     <div class="stat-item">
+      <div class="stat-number" id="accuracy">
+       0%
+      </div>
+      <div class="stat-label">
+       Precisión
+      </div>
+     </div>
+    </div>
+   </div>
   </div>
-
   <script>
-    /*****************************************************
-     * CONFIGURACIÓN
-     *****************************************************/
-    const YT_VIDEO_ID = 'WMeQMa49cWQ'; // tu video
-    const QUESTION_INTERVAL = 30; // segundos entre preguntas
-    const POLL_INTERVAL_MS = 300;  // cada cuánto comprobamos tiempo de reproducción
-    // Si quieres personalizar preguntas para tiempos específicos, añadir aquí:
-    // formato: { time: 30, question: "¿Qué...?", options: ["A","B","C","D"], correct: 1 }
-    // Si dejas vacío, se generarán preguntas de ejemplo.
-    const questionsByTime = [
-      // Ejemplo: { time: 30, question: "¿Qué aprendiste en 0-30s?", options:["Nada","Algo","Bastante","Todo"], correct: 2 },
-      // Puedes añadir manualmente o dejar vacío.
-    ];
-
-    /*****************************************************
-     * LÓGICA (no tocar si no sabes)
-     *****************************************************/
-    let player;
-    let duration = null;
-    let scheduledTimes = []; // array de segundos: [30,60,90,...]
-    let nextIdx = 0;
-    let pollTimer = null;
-    let answersLog = []; // {time, selected, correct}
-    const overlay = document.getElementById('overlay');
-    const qTitle = document.getElementById('qTitle');
-    const qHint = document.getElementById('qHint');
-    const optionsEl = document.getElementById('options');
-    const submitBtn = document.getElementById('submitBtn');
-    const skipBtn = document.getElementById('skipBtn');
-    const scoreBadge = document.getElementById('scoreBadge');
-    const footerSummary = document.getElementById('footerSummary');
-
-    // Carga la API de YouTube
-    function loadYouTubeAPI(callbackName='onYouTubeIframeAPIReady'){
-      const tag = document.createElement('script');
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(tag);
-      // YouTube API espera que exista la función global onYouTubeIframeAPIReady
-      window.onYouTubeIframeAPIReady = function(){
-        initPlayer();
-      };
-    }
-
-    function initPlayer(){
-      player = new YT.Player('player', {
-        height: '100%',
-        width: '100%',
-        videoId: YT_VIDEO_ID,
-        playerVars: {
-          controls: 1,
-          rel: 0,
-          modestbranding: 1,
-          iv_load_policy: 3,
-          disablekb: 0,
-          fs: 1
-        },
-        events: {
-          'onReady': onPlayerReady,
-          'onStateChange': onPlayerStateChange
-        }
-      });
-    }
-
-    function onPlayerReady(event){
-      // obtener duración y preparar tiempos
-      duration = player.getDuration();
-      prepareQuestionTimes();
-      updateScoreBadge();
-      startPolling();
-    }
-
-    function prepareQuestionTimes(){
-      scheduledTimes = [];
-      const total = Math.floor(duration);
-      // construir tiempos cada QUESTION_INTERVAL segundos
-      for(let t = QUESTION_INTERVAL; t < total; t += QUESTION_INTERVAL){
-        scheduledTimes.push(t);
-      }
-      // si preguntas definidas por usuario, reemplazar esos tiempos manteniendo orden
-      if (questionsByTime && questionsByTime.length){
-        // fusionar: preferir tiempos definidos por el usuario; si user defined times cover subset, include others
-        const userTimes = questionsByTime.map(q=>q.time).sort((a,b)=>a-b);
-        // union de sets
-        const set = new Set([...scheduledTimes, ...userTimes]);
-        scheduledTimes = Array.from(set).filter(t => t < total).sort((a,b)=>a-b);
-      }
-      // si no hay tiempos, no hagas nada
-      // Reset nextIdx
-      nextIdx = 0;
-    }
-
-    function startPolling(){
-      if (pollTimer) clearInterval(pollTimer);
-      pollTimer = setInterval(()=>{
-        if (!player || typeof player.getPlayerState !== 'function') return;
-        const state = player.getPlayerState();
-        if (state === YT.PlayerState.PLAYING){
-          const now = player.getCurrentTime();
-          checkForQuestion(now);
-        }
-      }, POLL_INTERVAL_MS);
-    }
-
-    function checkForQuestion(now){
-      if (nextIdx >= scheduledTimes.length) return;
-      const nextTime = scheduledTimes[nextIdx];
-      // si hemos pasado o igualado el tiempo (considerar tolerancia 0.6s)
-      if (now + 0.6 >= nextTime){
-        // Pausar y mostrar pregunta
-        player.pauseVideo();
-        showQuestionForTime(nextTime);
-      }
-    }
-
-    function showQuestionForTime(timeSec){
-      // obtener pregunta personalizada si existe en questionsByTime
-      const qDef = (questionsByTime || []).find(q=>Math.abs(q.time - timeSec) < 0.5);
-      let qObj;
-      if (qDef){
-        qObj = {
-          time: timeSec,
-          question: qDef.question || `Pregunta en ${timeSec}s`,
-          options: qDef.options || ['A','B','C','D'],
-          correct: qDef.correct ?? null
+        // Configuración por defecto
+        const defaultConfig = {
+            video_title: "Video Interactivo Educativo",
+            welcome_message: "¡Aprende de manera interactiva! Responde las preguntas para continuar.",
+            correct_feedback: "¡Excelente! Respuesta correcta.",
+            incorrect_feedback: "Respuesta incorrecta. La respuesta correcta es:"
         };
-      } else {
-        // Generar placeholder
-        qObj = {
-          time: timeSec,
-          question: `¿Qué punto clave recuerdas alrededor de ${formatTime(timeSec)}?`,
-          options: [
-            'Opción 1 (ejemplo)',
-            'Opción 2 (ejemplo)',
-            'Opción 3 (ejemplo)',
-            'Opción 4 (ejemplo)'
-          ],
-          correct: null
+
+        // Variables del juego
+        let currentQuestionIndex = 0;
+        let selectedOption = null;
+        let correctAnswers = 0;
+        let totalQuestions = 0;
+        let videoStarted = false;
+        let questionTimer = null;
+        let player = null;
+        let videoTimeTracker = null;
+
+        // Preguntas del quiz (basadas en contenido educativo general)
+        const questions = [
+            {
+                question: "¿Cuál es el primer paso importante en cualquier proceso de aprendizaje?",
+                options: [
+                    "Memorizar toda la información",
+                    "Establecer objetivos claros",
+                    "Leer rápidamente todo el material",
+                    "Hacer resúmenes inmediatamente"
+                ],
+                correct: 1
+            },
+            {
+                question: "¿Qué técnica es más efectiva para retener información a largo plazo?",
+                options: [
+                    "Repetición mecánica",
+                    "Lectura pasiva",
+                    "Práctica espaciada y activa",
+                    "Estudiar solo antes del examen"
+                ],
+                correct: 2
+            },
+            {
+                question: "¿Cuál es una característica clave del pensamiento crítico?",
+                options: [
+                    "Aceptar toda información sin cuestionarla",
+                    "Analizar y evaluar evidencias",
+                    "Memorizar datos sin contexto",
+                    "Seguir siempre la opinión popular"
+                ],
+                correct: 1
+            },
+            {
+                question: "¿Qué elemento es fundamental para el trabajo en equipo efectivo?",
+                options: [
+                    "Competir constantemente con los compañeros",
+                    "Trabajar siempre de forma individual",
+                    "Comunicación clara y respeto mutuo",
+                    "Evitar compartir ideas propias"
+                ],
+                correct: 2
+            },
+            {
+                question: "¿Cuál es la mejor estrategia para resolver problemas complejos?",
+                options: [
+                    "Buscar la solución más rápida",
+                    "Dividir el problema en partes más pequeñas",
+                    "Esperar que alguien más lo resuelva",
+                    "Aplicar siempre la misma metodología"
+                ],
+                correct: 1
+            }
+        ];
+
+        // Cargar API de YouTube
+        function loadYouTubeAPI() {
+            if (window.YT) {
+                initializePlayer();
+                return;
+            }
+            
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        }
+
+        // Función llamada automáticamente por la API de YouTube
+        window.onYouTubeIframeAPIReady = function() {
+            initializePlayer();
         };
-      }
-      presentQuestionModal(qObj);
-    }
 
-    // crea DOM del modal y lógica de respuesta
-    function presentQuestionModal(qObj){
-      qTitle.textContent = qObj.question;
-      qHint.textContent = `Segundos: ${qObj.time}`;
-      optionsEl.innerHTML = '';
-      submitBtn.disabled = true;
-      footerSummary.textContent = `Pregunta ${nextIdx+1} de ${scheduledTimes.length}`;
+        function initializePlayer() {
+            player = new YT.Player('videoPlayer', {
+                videoId: 'WMeQMa49cWQ',
+                playerVars: {
+                    'controls': 0,
+                    'modestbranding': 1,
+                    'rel': 0,
+                    'showinfo': 0,
+                    'fs': 1,
+                    'cc_load_policy': 0,
+                    'iv_load_policy': 3,
+                    'autohide': 1
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
 
-      let selectedIndex = null;
-      qObj.options.forEach((opt, i) => {
-        const b = document.createElement('button');
-        b.className = 'option-btn';
-        b.type = 'button';
-        b.innerText = opt;
-        b.addEventListener('click', () => {
-          // marcar selección
-          selectedIndex = i;
-          Array.from(optionsEl.children).forEach(ch => ch.classList.remove('selected'));
-          b.classList.add('selected');
-          submitBtn.disabled = false;
+        function onPlayerReady(event) {
+            console.log('Player ready');
+            document.getElementById('playBtn').disabled = false;
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING && videoStarted) {
+                startTimeTracking();
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                stopTimeTracking();
+            }
+        }
+
+        function startVideo() {
+            if (!player) {
+                alert('El reproductor aún no está listo. Espera un momento e intenta de nuevo.');
+                return;
+            }
+            
+            const playBtn = document.getElementById('playBtn');
+            playBtn.textContent = '⏸ Video en Reproducción';
+            playBtn.disabled = true;
+            videoStarted = true;
+            
+            // Iniciar el video
+            player.playVideo();
+        }
+
+        function startTimeTracking() {
+            if (videoTimeTracker) {
+                clearInterval(videoTimeTracker);
+            }
+            
+            // Mostrar indicador de video en vivo
+            const videoStatus = document.getElementById('videoStatus');
+            videoStatus.classList.add('active');
+            
+            videoTimeTracker = setInterval(() => {
+                if (player && player.getCurrentTime) {
+                    const currentTime = player.getCurrentTime();
+                    const targetTime = (currentQuestionIndex + 1) * 30; // Cada 30 segundos
+                    const timeToNext = targetTime - currentTime;
+                    
+                    // Mostrar countdown cuando falten 10 segundos
+                    const countdownTimer = document.getElementById('nextQuestionTimer');
+                    const countdownSpan = document.getElementById('countdown');
+                    
+                    if (timeToNext <= 10 && timeToNext > 0 && currentQuestionIndex < questions.length) {
+                        countdownTimer.style.display = 'block';
+                        countdownSpan.textContent = Math.ceil(timeToNext);
+                    } else {
+                        countdownTimer.style.display = 'none';
+                    }
+                    
+                    if (currentTime >= targetTime && currentQuestionIndex < questions.length) {
+                        player.pauseVideo();
+                        countdownTimer.style.display = 'none';
+                        showQuestion();
+                        stopTimeTracking();
+                    }
+                    
+                    // Actualizar barra de progreso basada en preguntas
+                    updateProgress();
+                }
+            }, 1000);
+        }
+
+        function stopTimeTracking() {
+            if (videoTimeTracker) {
+                clearInterval(videoTimeTracker);
+                videoTimeTracker = null;
+            }
+        }
+
+        function showQuestion() {
+            if (currentQuestionIndex >= questions.length) return;
+            
+            const question = questions[currentQuestionIndex];
+            const overlay = document.getElementById('quizOverlay');
+            const questionText = document.getElementById('questionText');
+            const optionsContainer = document.getElementById('quizOptions');
+            const questionNumber = document.getElementById('questionNumber');
+            
+            // Ocultar indicador de video en vivo
+            document.getElementById('videoStatus').classList.remove('active');
+            
+            // Actualizar número de pregunta
+            questionNumber.textContent = `Pregunta ${currentQuestionIndex + 1} de ${questions.length}`;
+            
+            questionText.textContent = question.question;
+            optionsContainer.innerHTML = '';
+            selectedOption = null;
+            
+            question.options.forEach((option, index) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'quiz-option';
+                optionDiv.innerHTML = `
+                    <strong>${String.fromCharCode(65 + index)}.</strong> ${option}
+                `;
+                optionDiv.onclick = () => selectOption(index, optionDiv);
+                optionsContainer.appendChild(optionDiv);
+            });
+            
+            // Reset UI
+            document.getElementById('submitBtn').style.display = 'inline-block';
+            document.getElementById('continueBtn').style.display = 'none';
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+            
+            overlay.style.display = 'flex';
+        }
+
+        function selectOption(index, element) {
+            // Remover selección previa
+            document.querySelectorAll('.quiz-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Seleccionar nueva opción
+            element.classList.add('selected');
+            selectedOption = index;
+            document.getElementById('submitBtn').disabled = false;
+        }
+
+        function checkAnswer() {
+            if (selectedOption === null) return;
+            
+            const question = questions[currentQuestionIndex];
+            const options = document.querySelectorAll('.quiz-option');
+            const feedback = document.getElementById('feedback');
+            const config = window.elementSdk?.config || defaultConfig;
+            
+            totalQuestions++;
+            
+            // Mostrar respuesta correcta e incorrecta
+            options.forEach((option, index) => {
+                if (index === question.correct) {
+                    option.classList.add('correct');
+                } else if (index === selectedOption && index !== question.correct) {
+                    option.classList.add('incorrect');
+                }
+            });
+            
+            if (selectedOption === question.correct) {
+                correctAnswers++;
+                feedback.textContent = config.correct_feedback || defaultConfig.correct_feedback;
+                feedback.className = 'feedback correct';
+            } else {
+                feedback.textContent = `${config.incorrect_feedback || defaultConfig.incorrect_feedback} ${String.fromCharCode(65 + question.correct)}. ${question.options[question.correct]}`;
+                feedback.className = 'feedback incorrect';
+            }
+            
+            feedback.style.display = 'block';
+            document.getElementById('submitBtn').style.display = 'none';
+            document.getElementById('continueBtn').style.display = 'inline-block';
+            
+            updateStats();
+        }
+
+        function continueVideo() {
+            document.getElementById('quizOverlay').style.display = 'none';
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < questions.length) {
+                // Mostrar indicador de video en vivo nuevamente
+                document.getElementById('videoStatus').classList.add('active');
+                
+                // Continuar reproduciendo el video
+                if (player) {
+                    player.playVideo();
+                }
+            } else {
+                showCompletionMessage();
+            }
+            
+            updateProgress();
+        }
+
+        function updateStats() {
+            document.getElementById('correctCount').textContent = correctAnswers;
+            document.getElementById('totalQuestions').textContent = totalQuestions;
+            const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+        }
+
+        function updateProgress() {
+            if (player && player.getCurrentTime && player.getDuration) {
+                const currentTime = player.getCurrentTime();
+                const duration = player.getDuration();
+                if (duration > 0) {
+                    const progress = (currentTime / duration) * 100;
+                    document.getElementById('progressFill').style.width = progress + '%';
+                }
+            }
+        }
+
+        function showCompletionMessage() {
+            const playBtn = document.getElementById('playBtn');
+            playBtn.textContent = '✅ Video Completado';
+            playBtn.disabled = true;
+            
+            // Detener el video
+            if (player) {
+                player.pauseVideo();
+            }
+            stopTimeTracking();
+            
+            // Mostrar mensaje de finalización
+            setTimeout(() => {
+                const overlay = document.getElementById('quizOverlay');
+                const questionText = document.getElementById('questionText');
+                const optionsContainer = document.getElementById('quizOptions');
+                
+                questionText.textContent = '¡Felicitaciones! Has completado el video interactivo.';
+                optionsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <p style="font-size: 1.2em; margin-bottom: 15px;">Resultados finales:</p>
+                        <p style="font-size: 1.1em;"><strong>${correctAnswers}</strong> de <strong>${totalQuestions}</strong> respuestas correctas</p>
+                        <p style="font-size: 1.1em;">Precisión: <strong>${totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0}%</strong></p>
+                    </div>
+                `;
+                
+                document.getElementById('submitBtn').style.display = 'none';
+                document.getElementById('continueBtn').style.display = 'none';
+                document.getElementById('feedback').style.display = 'none';
+                
+                overlay.style.display = 'flex';
+            }, 1000);
+        }
+
+        // Configuración del SDK de elementos
+        async function onConfigChange(config) {
+            document.getElementById('videoTitle').textContent = config.video_title || defaultConfig.video_title;
+            document.getElementById('welcomeMessage').textContent = config.welcome_message || defaultConfig.welcome_message;
+        }
+
+        function mapToCapabilities(config) {
+            return {
+                recolorables: [],
+                borderables: [],
+                fontEditable: undefined,
+                fontSizeable: undefined
+            };
+        }
+
+        function mapToEditPanelValues(config) {
+            return new Map([
+                ["video_title", config.video_title || defaultConfig.video_title],
+                ["welcome_message", config.welcome_message || defaultConfig.welcome_message],
+                ["correct_feedback", config.correct_feedback || defaultConfig.correct_feedback],
+                ["incorrect_feedback", config.incorrect_feedback || defaultConfig.incorrect_feedback]
+            ]);
+        }
+
+        // Inicializar SDK
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig,
+                onConfigChange,
+                mapToCapabilities,
+                mapToEditPanelValues
+            });
+        }
+
+        // Inicializar estadísticas y cargar API de YouTube
+        updateStats();
+        
+        // Cargar la API de YouTube cuando la página esté lista
+        document.addEventListener('DOMContentLoaded', function() {
+            loadYouTubeAPI();
         });
-        optionsEl.appendChild(b);
-      });
-
-      // Mostrar overlay y bloquear interacción con el player
-      overlay.style.display = 'flex';
-
-      // Deshabilitar controles nativos mientras modal activo (intento)
-      // Nota: no podemos quitar completamente controles del iframe, pero al poner overlay encima, evitamos clicks.
-
-      // Submit handler
-      function onSubmit(){
-        // registrar respuesta
-        const isCorrect = (qObj.correct !== null) ? (selectedIndex === qObj.correct) : null;
-        answersLog.push({
-          time: qObj.time,
-          selected: selectedIndex,
-          correct: qObj.correct,
-          isCorrect
-        });
-        nextIdx++;
-        updateScoreBadge();
-        // cerrar modal y reanudar
-        overlay.style.display = 'none';
-        // small delay to allow UI to hide before resuming
-        setTimeout(()=> {
-          // avanzar un poco (0.2s) para evitar volver a disparar la misma pausa
-          try{
-            const newTime = Math.min(player.getDuration(), qObj.time + 0.2);
-            player.seekTo(newTime, true);
-          } catch(e){}
-          player.playVideo();
-        }, 120);
-        // cleanup
-        submitBtn.removeEventListener('click', onSubmit);
-        skipBtn.removeEventListener('click', onSkip);
-      }
-
-      // Optionally: allow skipping (disabled by default). You can enable and implement policy.
-      function onSkip(){
-        answersLog.push({
-          time: qObj.time,
-          selected: null,
-          correct: qObj.correct,
-          isCorrect: false,
-          skipped: true
-        });
-        nextIdx++;
-        updateScoreBadge();
-        overlay.style.display = 'none';
-        setTimeout(()=> {
-          try{ player.seekTo(qObj.time + 0.2, true); } catch(e){}
-          player.playVideo();
-        }, 120);
-        submitBtn.removeEventListener('click', onSubmit);
-        skipBtn.removeEventListener('click', onSkip);
-      }
-
-      submitBtn.addEventListener('click', onSubmit);
-      // skipBtn.addEventListener('click', onSkip); // si quieres habilitar skip, descomenta.
-
-      // Focus first option for accessibility
-      const firstOpt = optionsEl.querySelector('button');
-      if (firstOpt) firstOpt.focus();
-    }
-
-    function updateScoreBadge(){
-      const done = answersLog.length;
-      const total = scheduledTimes.length;
-      scoreBadge.textContent = `${done} / ${total}`;
-    }
-
-    function onPlayerStateChange(event){
-      // si el video termina, show summary
-      if (event.data === YT.PlayerState.ENDED){
-        showSummary();
-      }
-    }
-
-    function showSummary(){
-      // construir resumen simple
-      let correctCount = answersLog.filter(a => a.isCorrect === true).length;
-      const total = scheduledTimes.length;
-      const summaryLines = answersLog.map((a, i) => {
-        const t = formatTime(a.time);
-        const sel = (a.selected === null) ? '—' : `Opción ${a.selected+1}`;
-        const corr = (a.correct === null) ? 'N/A' : `Opción ${a.correct+1}`;
-        const ok = (a.isCorrect === null) ? '' : (a.isCorrect ? '✅' : '❌');
-        return `${i+1}) ${t} — seleccionado: ${sel} — correcto: ${corr} ${ok}`;
-      }).join('\n');
-
-      // Reusar el modal para mostrar resumen
-      qTitle.textContent = `Resumen: ${answersLog.length} respuestas registradas`;
-      qHint.textContent = `Aciertos: ${correctCount} / ${total}`;
-      optionsEl.innerHTML = '<pre style="white-space:pre-wrap; font-size:.92rem; color:#222; margin:0;">' + (summaryLines || 'No hubo respuestas registradas.') + '</pre>';
-      submitBtn.disabled = false;
-      submitBtn.innerText = 'Cerrar';
-      submitBtn.onclick = () => { overlay.style.display='none'; submitBtn.innerText = 'Responder y continuar'; };
-      skipBtn.style.display = 'none';
-      overlay.style.display = 'flex';
-    }
-
-    function formatTime(s){
-      s = Math.floor(s || 0);
-      const mm = Math.floor(s/60).toString().padStart(2,'0');
-      const ss = (s%60).toString().padStart(2,'0');
-      return `${mm}:${ss}`;
-    }
-
-    // Inicializamos la API
-    loadYouTubeAPI();
-
-    // Evitar que el usuario cierre modal con ESC accidentalmente (si quieres permitirlo, manejar keydown)
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && overlay.style.display === 'flex'){
-        // opcional: no permitir
-        e.preventDefault();
-      }
-    });
-
-    // Si quieres exponer una función para añadir preguntas personalizadas vía JS
-    // example: addQuestion(30, '¿Cuál es...', ['A','B','C','D'], 2)
-    function addQuestion(time, question, options, correctIndex = null){
-      if (!Array.isArray(questionsByTime)) window.questionsByTime = [];
-      window.questionsByTime.push({ time, question, options, correct: correctIndex });
-      prepareQuestionTimes();
-      updateScoreBadge();
-    }
-
-    // Exponer a window para depuración (opcional)
-    window._interactiveVideo = {
-      getScheduledTimes: ()=>scheduledTimes,
-      getAnswers: ()=>answersLog,
-      addQuestion
-    };
-  </script>
-</body>
+        
+        // Si el DOM ya está cargado
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadYouTubeAPI);
+        } else {
+            loadYouTubeAPI();
+        }
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99da8d4687088a88',t:'MTc2Mjk5NzkzMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
